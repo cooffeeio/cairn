@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0E1419"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="CAIRN"/>
+  <title>CAIRN — トレーニングログ</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --sans:'Inter',system-ui,-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+      --bg:#0E1419;--panel:#161E25;--raised:#1E2832;--line:#2A3742;
+      --line2:#384956;--text:#E8EDF0;--muted:#8A99A6;--faint:#5C6B77;
+      --run:#F2A03D;--hike:#7FB069;--climb:#45C4D6;
+      --good:#7FB069;--warn:#E8B14C;--bad:#E5654B;--info:#5B8FB0;
+    }
+    html,body{height:100%;background:var(--bg);overscroll-behavior:none}
+    #root{min-height:100vh;font-family:var(--sans);color:var(--text);background:var(--bg)}
+    /* Loading */
+    #splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999;transition:opacity .35s}
+    #splash.out{opacity:0;pointer-events:none}
+    .sp-mark{animation:bob 1.4s ease-in-out infinite}
+    @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    .sp-label{font-family:var(--mono);font-size:11px;letter-spacing:4px;color:var(--faint);text-transform:uppercase}
+    /* Error */
+    #err{display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:32px;text-align:center}
+    #err.show{display:flex}
+    #err h2{font-size:18px;color:var(--bad)}
+    #err p{font-size:14px;color:var(--muted);line-height:1.6}
+    /* Install / Offline */
+    #install-banner{display:none;position:fixed;bottom:80px;left:16px;right:16px;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:14px 16px;z-index:40;gap:12px;align-items:center;box-shadow:0 8px 32px #00000055}
+    #install-banner.show{display:flex}
+    #install-banner p{flex:1;font-size:13px;color:var(--muted);line-height:1.45}
+    #install-banner p strong{color:var(--text)}
+    #ibtn{background:var(--climb);color:var(--bg);border:none;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--sans)}
+    #idismiss{background:none;border:none;color:var(--faint);font-size:20px;cursor:pointer}
+    #ios-hint{display:none;position:fixed;bottom:80px;left:16px;right:16px;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:14px 16px;z-index:40;box-shadow:0 8px 32px #00000055}
+    #ios-hint.show{display:block}
+    #ios-hint p{font-size:13px;color:var(--muted);line-height:1.6}
+    #ios-hint strong{color:var(--text)}
+    #ios-close{background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;float:right;margin-top:-4px}
+    #offline-bar{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-60px);background:var(--bad);color:#fff;font-size:13px;font-weight:600;padding:8px 18px;border-radius:999px;transition:transform .3s;z-index:999;white-space:nowrap}
+    #offline-bar.show{transform:translateX(-50%) translateY(0)}
+    /* Input */
+    input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--line2);outline:none}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;cursor:pointer}
+    .cin:focus{border-color:var(--info)!important;outline:none}
+    .cin::placeholder{color:var(--faint)}
+    .cbtn:active,.cchip:active{transform:scale(.97)}
+    .cbtn,.cchip{transition:transform .08s}
+    ::-webkit-scrollbar{width:8px}
+    ::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px}
+    select.cin option{background:var(--raised);color:var(--text)}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <svg class="sp-mark" width="44" height="50" viewBox="0 0 44 50" fill="none">
+    <ellipse cx="22" cy="39" rx="14" ry="5" fill="#2A3742"/>
+    <rect x="8" y="28" width="28" height="9" rx="4" fill="#7FB069"/>
+    <rect x="12" y="19" width="20" height="8" rx="3.5" fill="#F2A03D"/>
+    <rect x="15.5" y="11" width="13" height="7.5" rx="3" fill="#45C4D6"/>
+    <circle cx="22" cy="5" r="4" fill="#E8EDF0"/>
+  </svg>
+  <div class="sp-label">CAIRN を起動中</div>
+</div>
+
+<div id="err">
+  <h2>⚠ 読み込みに失敗しました</h2>
+  <p>ネットワーク接続を確認して<br>ページを再読み込みしてください。<br><br><small id="err-detail" style="color:var(--faint)"></small></p>
+  <button onclick="location.reload()" style="background:var(--info);color:#fff;border:none;border-radius:9px;padding:12px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--sans)">再読み込み</button>
+</div>
+
+<div id="install-banner">
+  <p><strong>ホーム画面に追加</strong><br>オフラインでも使えます</p>
+  <button id="ibtn">追加</button>
+  <button id="idismiss">×</button>
+</div>
+<div id="ios-hint">
+  <button id="ios-close">×</button>
+  <p><strong>ホーム画面に追加する方法</strong><br>Safari の <strong>共有ボタン（↑）</strong> をタップ → 「<strong>ホーム画面に追加</strong>」を選択</p>
+</div>
+<div id="offline-bar">📵 オフラインモード</div>
+<div id="root"></div>
+
+<!-- jsDelivr (日本CDNノードあり・minified) -->
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+// Firebase module（下の type="module" スクリプト）の初期化完了を待つブリッジ
+window.firebaseReady = new Promise(function(res){ window.__fbResolve = res; });
+</script>
+
+<!--
+  ══════════════ Firebase セットアップ手順 ══════════════
+  1. https://console.firebase.google.com でプロジェクトを作成
+  2. Authentication → Sign-in method → 「メール/パスワード」と「Google」を有効化
+  3. Authentication → Settings → 承認済みドメイン に GitHub Pages のドメイン
+     （例: username.github.io）を追加
+  4. Firestore Database を作成し、ルールに以下を設定:
+
+     rules_version = '2';
+     service cloud.firestore {
+       match /databases/{database}/documents {
+         match /users/{uid}/{document=**} {
+           allow read, write: if request.auth != null && request.auth.uid == uid;
+         }
+         match /hubSummary/{uid} {
+           allow read, write: if request.auth != null && request.auth.uid == uid;
+         }
+       }
+     }
+
+  5. プロジェクトの設定 → 全般 → マイアプリ → ウェブアプリを追加し、
+     表示される firebaseConfig の値を下の FIREBASE_CONFIG に貼り付け
+  ═══════════════════════════════════════════════════════
+-->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import {
+  initializeFirestore, getFirestore,
+  persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, getDocs, getDoc, setDoc, deleteDoc, writeBatch, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+// ▼▼▼ ここに自分の firebaseConfig を貼り付ける ▼▼▼
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+// ▲▲▲ IELTSトラッカーと同じプロジェクト・同じ値でOK ▲▲▲
+
+(function initFirebase(){
+  if (!FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.projectId) {
+    window.__fbResolve({ configMissing: true });
+    return;
+  }
+  const app  = initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  let db;
+  try {
+    // オフライン永続化（IndexedDB）。複数タブでも安全なマネージャを使用
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+  } catch (err) {
+    console.warn("永続キャッシュを初期化できないためメモリキャッシュで続行:", err);
+    db = getFirestore(app);
+  }
+  const userDoc = (coll, id) => doc(db, "users", auth.currentUser.uid, coll, id);
+
+  const api = {
+    configMissing: false,
+    onUser(cb){ onAuthStateChanged(auth, cb); },
+    get currentUser(){ return auth.currentUser; },
+    signInGoogle(){ return signInWithPopup(auth, new GoogleAuthProvider()); },
+    signInEmail(email, pw){ return signInWithEmailAndPassword(auth, email, pw); },
+    signUpEmail(email, pw){ return createUserWithEmailAndPassword(auth, email, pw); },
+    resetPassword(email){ return sendPasswordResetEmail(auth, email); },
+    signOut(){ return signOut(auth); },
+    async loadCollection(name){
+      const snap = await getDocs(collection(db, "users", auth.currentUser.uid, name));
+      return snap.docs.map(d => d.data());
+    },
+    async loadDoc(coll, id){
+      const s = await getDoc(userDoc(coll, id));
+      return s.exists() ? s.data() : null;
+    },
+    setDocIn(coll, id, data){ return setDoc(userDoc(coll, id), data); },
+    deleteDocIn(coll, id){ return deleteDoc(userDoc(coll, id)); },
+    // 追加/更新と削除をまとめてバッチ書き込み（500件制限を考慮し400件ずつ）
+    async batchWrite(coll, sets, dels){
+      const ops = [
+        ...sets.map(s => ({ t: "set", id: s.id, data: s.data })),
+        ...dels.map(id => ({ t: "del", id }))
+      ];
+      for (let i = 0; i < ops.length; i += 400) {
+        const b = writeBatch(db);
+        for (const op of ops.slice(i, i + 400)) {
+          const ref = userDoc(coll, op.id);
+          if (op.t === "set") b.set(ref, op.data); else b.delete(ref);
+        }
+        await b.commit();
+      }
+    },
+    // 統合ダッシュボード用の固定ドキュメント hubSummary/{uid} にマージ書き込み
+    writeHub(appKey, payload){
+      return setDoc(
+        doc(db, "hubSummary", auth.currentUser.uid),
+        { [appKey]: payload, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    }
+  };
+  window.__fbResolve(api);
+})();
+</script>
+
+<script>
+// エラーハンドラ：CDN読み込み失敗を検知
+window.onerror = function(msg, src, line, col, err) {
+  if (!window.React || !window.ReactDOM) {
+    document.getElementById('splash').classList.add('out');
+    document.getElementById('err').classList.add('show');
+    document.getElementById('err-detail').textContent = msg;
+  }
+};
+</script>
+
+<script>
+"use strict";
+(function(){
+
+// ── React shorthand ────────────────────────────────────────────────
+const e = React.createElement;
+const {useState,useEffect,useMemo,useRef,Fragment} = React;
+
+// ── Palette / Constants ───────────────────────────────────────────
+const C={
+  bg:"#0E1419",panel:"#161E25",raised:"#1E2832",line:"#2A3742",
+  line2:"#384956",text:"#E8EDF0",muted:"#8A99A6",faint:"#5C6B77",
+  run:"#F2A03D",hike:"#7FB069",climb:"#45C4D6",
+  good:"#7FB069",warn:"#E8B14C",bad:"#E5654B",info:"#5B8FB0",
+};
+const SPORTS={
+  run:{key:"run",label:"ランニング",color:C.run},
+  hike:{key:"hike",label:"登山",color:C.hike},
+  climb:{key:"climb",label:"クライミング",color:C.climb},
+};
+// ── カスタム種目 ──────────────────────────────────────────────────
+// settings.customSports = [{key,label,color,template}]
+// template: "timed"(時間のみ) | "distance"(距離あり) | "sets"(セット/本数)
+const CUSTOM_COLORS=["#D967A8","#8F7FE8","#5BC08F","#E8DE6B","#6BAEE8","#E88B6B","#B8E85B","#5BE8D6"];
+let CUSTOM_SPORTS=[]; // settings読み込み時・保存時に更新されるレジストリ
+function setCustomSports(list){CUSTOM_SPORTS=Array.isArray(list)?list:[];}
+function allSports(){return[...Object.values(SPORTS),...CUSTOM_SPORTS];}
+function sportOf(key){
+  return SPORTS[key]
+    ||CUSTOM_SPORTS.find(s=>s.key===key)
+    ||{key,label:key||"不明",color:C.info,template:"timed"}; // 削除済み種目でも安全に表示
+}
+function nextCustomColor(){return CUSTOM_COLORS[CUSTOM_SPORTS.length%CUSTOM_COLORS.length];}
+const RUN_TYPES=["イージー","ロング","テンポ","インターバル","レース","その他"];
+const HARD_RUN=new Set(["テンポ","インターバル","レース"]);
+const STYLE_TAGS=["スラブ","垂壁","強傾斜","ルーフ","カチ","スローパー","ピンチ","ポケット","ランジ","コーディネーション","バランス","保持力","持久力"];
+const V_GRADES=["VB","V0","V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14"];
+const KYU_DAN=[{l:"8級",i:0},{l:"7級",i:1},{l:"6級",i:2},{l:"5級",i:3},{l:"4級",i:4},{l:"3級",i:5},{l:"2級",i:6},{l:"1級",i:7},{l:"初段",i:8},{l:"二段",i:9},{l:"三段",i:11},{l:"四段",i:13},{l:"五段",i:15}];
+const YDS=["5.6","5.7","5.8","5.9","5.10a","5.10b","5.10c","5.10d","5.11a","5.11b","5.11c","5.11d","5.12a","5.12b","5.12c","5.12d","5.13a","5.13b","5.13c","5.13d","5.14a"];
+const SEND_RESULTS={boulder:["フラッシュ","完登(RP)","再登","プロジェクト"],route:["オンサイト","フラッシュ","完登(RP)","再登","プロジェクト"]};
+const ZONE_DEFS=[
+  {l:"Z1",name:"回復",  hi:0.60,c:C.info},
+  {l:"Z2",name:"有酸素",hi:0.70,c:C.hike},
+  {l:"Z3",name:"テンポ",hi:0.80,c:C.run},
+  {l:"Z4",name:"閾値",  hi:0.90,c:"#E58B3D"},
+  {l:"Z5",name:"VO2max",hi:1.01,c:C.bad},
+];
+const GOAL_METRICS=[
+  {k:"run_week_km",    label:"週間走行距離",          unit:"km",sport:"run"},
+  {k:"run_month_km",   label:"月間走行距離",          unit:"km",sport:"run"},
+  {k:"hike_month_elev",label:"月間 獲得標高",         unit:"m", sport:"hike"},
+  {k:"climb_max_boulder",label:"ボルダー最高グレード",unit:"",  sport:"climb"},
+  {k:"climb_elo",      label:"ボルダーELO",           unit:"",  sport:"climb"},
+  {k:"sessions_30d",   label:"30日のセッション数",    unit:"回",sport:null},
+  {k:"manual",         label:"自由目標（手動進捗）",  unit:"%", sport:null},
+];
+
+// ── Storage: Firebase Firestore ──────────────────────────────────
+// 旧localStorageキー（初回ログイン時のデータ移行にのみ使用）
+const K_ENTRIES="cairn_entries_v2",K_GOALS="cairn_goals_v2",K_SET="cairn_settings_v2";
+// Firestoreコレクション名（users/{uid}/ 配下）
+const COLL_ENTRIES="cairn_entries",COLL_META="cairn_meta",COLL_WELLNESS="cairn_wellness";
+// Firestoreはundefinedを受け付けないためJSON往復で除去
+const clean=o=>JSON.parse(JSON.stringify(o));
+function lsRead(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(_){return null;}}
+
+// 差分同期用スナップショット（docId → entry）
+let lastById=new Map();
+
+async function loadCloud(fb){
+  const entries=(await fb.loadCollection(COLL_ENTRIES)).filter(x=>x&&x.id!=null);
+  lastById=new Map(entries.map(x=>[String(x.id),x]));
+  const g=await fb.loadDoc(COLL_META,"goals");
+  const s=await fb.loadDoc(COLL_META,"settings");
+  // 体調記録（docId=日付、1日1ドキュメント）
+  const wellness=(await fb.loadCollection(COLL_WELLNESS))
+    .filter(x=>x&&x.date)
+    .sort((a,b)=>a.date<b.date?-1:1);
+  return{entries,goals:(g&&g.items)||[],settings:s||{maxHr:190},wellness};
+}
+
+// 配列全体を受け取り、前回スナップショットとの差分のみFirestoreへ反映
+function syncEntries(fb,arr){
+  const sets=[],dels=[];const seen=new Set();
+  for(const x of arr){
+    const id=String(x.id);seen.add(id);
+    const prev=lastById.get(id);
+    if(prev===x)continue;                                   // 参照同一＝変更なし
+    if(prev&&JSON.stringify(prev)===JSON.stringify(x))continue;
+    sets.push({id,data:clean(x)});
+  }
+  for(const id of lastById.keys())if(!seen.has(id))dels.push(id);
+  lastById=new Map(arr.map(x=>[String(x.id),x]));
+  if(!sets.length&&!dels.length)return Promise.resolve();
+  return fb.batchWrite(COLL_ENTRIES,sets,dels);
+}
+
+// 初回ログイン時：localStorageの既存データをFirestoreへ移行
+async function migrateLocalToCloud(fb,userId){
+  const flag="cairn_fs_migrated_"+userId;
+  try{if(localStorage.getItem(flag))return{migrated:false};}catch(_){return{migrated:false};}
+  const le=lsRead(K_ENTRIES),lg=lsRead(K_GOALS),lset=lsRead(K_SET);
+  const hasLocal=(le&&le.length)||(lg&&lg.length)||lset;
+  if(!hasLocal){try{localStorage.setItem(flag,"1");}catch(_){}return{migrated:false};}
+  let count=0;
+  // 他端末のクラウドデータを上書きしないよう、クラウドが空の場合のみ移行
+  const cloud=await fb.loadCollection(COLL_ENTRIES);
+  if(!cloud.length&&le&&le.length){
+    await fb.batchWrite(COLL_ENTRIES,le.map(x=>({id:String(x.id||uid()),data:clean(x)})),[]);
+    count=le.length;
+  }
+  if(lg&&lg.length&&!(await fb.loadDoc(COLL_META,"goals")))
+    await fb.setDocIn(COLL_META,"goals",{items:clean(lg)});
+  if(lset&&!(await fb.loadDoc(COLL_META,"settings")))
+    await fb.setDocIn(COLL_META,"settings",clean(lset));
+  try{localStorage.setItem(flag,"1");}catch(_){}
+  return{migrated:true,count};
+}
+
+// ── 体調データ計算（HRVベースライン・異常検知・相関）─────────────
+// 直近値を除く過去n件のHRV移動平均（最低min件必要）
+function hrvBaseline(wellness,excludeDate,n=7,min=4){
+  const vals=wellness.filter(w=>w.hrv>0&&w.date!==excludeDate&&w.date<excludeDate)
+    .slice(-n).map(w=>w.hrv);
+  return vals.length>=min?mean(vals):null;
+}
+// アプリ起動時の体調アラート判定：直近3日以内のHRVが移動平均から±18%以上乖離
+function hrvAnomaly(wellness){
+  const withHrv=wellness.filter(w=>w.hrv>0);
+  if(!withHrv.length)return null;
+  const latest=withHrv[withHrv.length-1];
+  if(daysBetween(latest.date,today())>3)return null;
+  const base=hrvBaseline(wellness,latest.date);
+  if(!base)return null;
+  const delta=(latest.hrv-base)/base;
+  if(delta<=-0.18)return{type:"low",date:latest.date,value:latest.hrv,baseline:Math.round(base),pct:Math.round(-delta*100)};
+  if(delta>=0.25)return{type:"high",date:latest.date,value:latest.hrv,baseline:Math.round(base),pct:Math.round(delta*100)};
+  return null;
+}
+function pearson(xs,ys){
+  const n=xs.length;if(n<3)return 0;
+  const mx=mean(xs),my=mean(ys);
+  let num=0,dx=0,dy=0;
+  for(let i=0;i<n;i++){const a=xs[i]-mx,b=ys[i]-my;num+=a*b;dx+=a*a;dy+=b*b;}
+  return dx&&dy?num/Math.sqrt(dx*dy):0;
+}
+// 「睡眠不足の翌日にHRVが下がる」等の相関を自動抽出してカード化
+function computeWellnessInsights(wellness,entries){
+  const out=[];
+  const byDate=new Map(wellness.map(w=>[w.date,w]));
+  const nextDate=d=>{const x=parseD(d);x.setDate(x.getDate()+1);return x.toISOString().slice(0,10);};
+  const loadByDate={};
+  entries.forEach(x=>{loadByDate[x.date]=(loadByDate[x.date]||0)+sessionLoad(x);});
+
+  // 1) 睡眠 → 翌日HRV
+  const sleepPairs=[]; // {sleep, nextHrv}
+  wellness.forEach(w=>{
+    if(!(w.sleepMin>0))return;
+    const nx=byDate.get(nextDate(w.date));
+    if(nx&&nx.hrv>0)sleepPairs.push({sleep:w.sleepMin,hrv:nx.hrv});
+  });
+  if(sleepPairs.length>=6){
+    const medSleep=median(sleepPairs.map(p=>p.sleep));
+    const short=sleepPairs.filter(p=>p.sleep<medSleep-45);
+    const normal=sleepPairs.filter(p=>p.sleep>=medSleep-45);
+    if(short.length>=3&&normal.length>=3){
+      const d=(mean(short.map(p=>p.hrv))-mean(normal.map(p=>p.hrv)))/mean(normal.map(p=>p.hrv));
+      if(d<=-0.05)out.push({color:C.warn,tag:"睡眠→HRV",
+        title:`睡眠不足の翌日はHRVが平均${Math.round(-d*100)}%低い`,
+        detail:`睡眠が${Math.round((medSleep-45)/60*10)/10}時間未満だった夜（${short.length}回）の翌日HRVは、十分眠れた日と比べて低下しています。`});
+    }
+    const r=pearson(sleepPairs.map(p=>p.sleep),sleepPairs.map(p=>p.hrv));
+    if(Math.abs(r)>=0.35)out.push({color:r>0?C.good:C.info,tag:"相関",
+      title:`睡眠時間と翌日HRVに${r>0?"正":"負"}の相関（r=${r.toFixed(2)}）`,
+      detail:`${sleepPairs.length}日分のデータから算出。r>0.35は中程度以上の関連の目安です。`});
+  }
+  // 2) 高負荷 → 翌日HRV/RHR
+  const loadPairs=[];
+  Object.keys(loadByDate).forEach(d=>{
+    const nx=byDate.get(nextDate(d));
+    if(nx&&(nx.hrv>0||nx.rhr>0))loadPairs.push({load:loadByDate[d],hrv:nx.hrv||null,rhr:nx.rhr||null});
+  });
+  if(loadPairs.length>=6){
+    const loads=loadPairs.map(p=>p.load).sort((a,b)=>a-b);
+    const q3=loads[Math.floor(loads.length*0.75)];
+    const hardH=loadPairs.filter(p=>p.load>=q3&&p.hrv),restH=loadPairs.filter(p=>p.load<q3&&p.hrv);
+    if(hardH.length>=3&&restH.length>=3){
+      const d=(mean(hardH.map(p=>p.hrv))-mean(restH.map(p=>p.hrv)))/mean(restH.map(p=>p.hrv));
+      if(d<=-0.05)out.push({color:C.bad,tag:"負荷→HRV",
+        title:`高負荷日の翌朝はHRVが平均${Math.round(-d*100)}%低い`,
+        detail:`負荷上位25%（${Math.round(q3)}AU以上）のセッション翌日は回復指標が下がる傾向。強度日の翌日はZ1回復を。`});
+    }
+    const hardR=loadPairs.filter(p=>p.load>=q3&&p.rhr),restR=loadPairs.filter(p=>p.load<q3&&p.rhr);
+    if(hardR.length>=3&&restR.length>=3){
+      const d=mean(hardR.map(p=>p.rhr))-mean(restR.map(p=>p.rhr));
+      if(d>=2)out.push({color:C.warn,tag:"負荷→安静時心拍",
+        title:`高負荷日の翌朝は安静時心拍が平均+${Math.round(d)}bpm`,
+        detail:"安静時心拍の上昇は回復不足のサイン。数日続く場合は負荷を落としましょう。"});
+    }
+  }
+  // 3) 現在のHRV異常（バナーと同じ判定）
+  const an=hrvAnomaly(wellness);
+  if(an)out.push(an.type==="low"
+    ?{color:C.bad,tag:"HRV低下",title:`HRVが7日平均より${an.pct}%低下（${an.value}ms / 平均${an.baseline}ms）`,detail:"回復を優先する日に。強度の高いトレーニングは避けるのが無難です。"}
+    :{color:C.info,tag:"HRV上昇",title:`HRVが7日平均より${an.pct}%高い（${an.value}ms）`,detail:"状態良好の可能性。質の高いセッションを入れるチャンスです。"});
+  return out;
+}
+
+// ── Hub summary（統合ダッシュボード連携: hubSummary/{uid}.cairn）──
+function computeHubSummary(entries,wellness){
+  const t=today();
+  const todays=entries.filter(x=>x.date===t);
+  const load=computeLoad(entries);
+  const st=acwrStatus(load.acwr);
+  const wk=weeklySeries(entries,1);
+  const todayPlan=todays.length
+    ?{status:"logged",text:todays.map(x=>{
+        const sp=sportOf(x.sport);
+        const d=x.distance?` ${x.distance}km`:` ${x.duration}分`;
+        return sp.label+d;
+      }).join(" / ")}
+    :{status:"unlogged",text:load.acwr
+        ?`未記録 — ACWR ${load.acwr.toFixed(2)}（${st.label}）`
+        :"未記録"};
+  // 直近のHRV評価
+  let latestHRV=null;
+  const withHrv=(wellness||[]).filter(w=>w.hrv>0);
+  if(withHrv.length){
+    const lastW=withHrv[withHrv.length-1];
+    const base=hrvBaseline(wellness,lastW.date);
+    const an=hrvAnomaly(wellness);
+    latestHRV={
+      date:lastW.date,value:lastW.hrv,
+      baseline:base?Math.round(base):null,
+      status:an?(an.type==="low"?"低下":"高め"):"平常",
+      deltaPct:base?Math.round(((lastW.hrv-base)/base)*100):null,
+    };
+  }
+  return{
+    schemaVersion:1,
+    todayPlan,
+    todayTrainedMin:todays.reduce((a,x)=>a+(Number(x.duration)||0),0), // 指揮官の生産的活動入力ヒント用
+    latestHRV,
+    weeklyLoad:{
+      acute:load.acute,chronic:load.chronic,
+      acwr:Math.round(load.acwr*100)/100,status:st.label,
+      thisWeek:wk.length?wk[wk.length-1].load:0
+    },
+    updatedAt:new Date().toISOString(),
+  };
+}
+let hubTimer=null;
+function pushHub(fb,entries,wellness){
+  clearTimeout(hubTimer);
+  hubTimer=setTimeout(()=>{
+    try{fb.writeHub("cairn",computeHubSummary(entries,wellness||[])).catch(err=>console.warn("hub sync:",err));}
+    catch(err){console.warn("hub sync:",err);}
+  },800);
+}
+
+// ── Utilities ────────────────────────────────────────────────────
+const today=()=>new Date().toISOString().slice(0,10);
+const parseD=s=>new Date(s+"T00:00:00");
+const daysBetween=(a,b)=>Math.round((parseD(b)-parseD(a))/86400000);
+const monthKey=s=>s.slice(0,7);
+function weekStart(s){const d=parseD(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10);}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const sessionLoad=e=>(Number(e.rpe)||0)*(Number(e.duration)||0);
+const num=v=>(v===""||v==null)?undefined:Number(v);
+const mean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
+const median=a=>{if(!a.length)return 0;const b=[...a].sort((x,y)=>x-y);return b[Math.floor(b.length/2)];};
+const fmtPace=sec=>{if(!sec||!isFinite(sec))return"—";const m=Math.floor(sec/60),s=Math.round(sec%60);return`${m}:${s.toString().padStart(2,"0")}`;};
+function gradeList(d,s){if(d==="route")return YDS.map((l,i)=>({l,i}));return s==="kyudan"?KYU_DAN:V_GRADES.map((l,i)=>({l,i}));}
+function idxToLabel(d,idx){if(d==="route")return YDS[Math.round(idx)]||"";return V_GRADES[Math.max(0,Math.round(idx))]||"";}
+const sumKey=(arr,key)=>Math.round(arr.reduce((s,e)=>s+(e[key]||0),0)*10)/10;
+
+// ── Load math ────────────────────────────────────────────────────
+function computeLoad(entries){
+  const t=today();
+  const within=n=>entries.filter(e=>{const d=daysBetween(e.date,t);return d>=0&&d<n;});
+  const sum=a=>a.reduce((s,e)=>s+sessionLoad(e),0);
+  const acute=sum(within(7)),chronic=sum(within(28))/4;
+  return{acute:Math.round(acute),chronic:Math.round(chronic),acwr:chronic>0?acute/chronic:0};
+}
+function weeklySeries(entries,weeks=10){
+  const map={};entries.forEach(e=>{const w=weekStart(e.date);map[w]=(map[w]||0)+sessionLoad(e);});
+  const out=[];let d=parseD(weekStart(today()));
+  for(let i=0;i<weeks;i++){const k=d.toISOString().slice(0,10);out.unshift({week:k.slice(5),load:Math.round(map[k]||0)});d.setDate(d.getDate()-7);}
+  return out;
+}
+function acwrStatus(r){
+  if(!r)return{label:"データ不足",color:C.muted};
+  if(r<0.8)return{label:"負荷が低い",color:C.info};
+  if(r<=1.3)return{label:"最適ゾーン",color:C.good};
+  if(r<=1.5)return{label:"やや高い",color:C.warn};
+  return{label:"高リスク",color:C.bad};
+}
+
+// ── GPX/TCX ──────────────────────────────────────────────────────
+function haversine(a,b){
+  const R=6371000,toR=Math.PI/180;
+  const dLat=(b.lat-a.lat)*toR,dLon=(b.lon-a.lon)*toR;
+  const h=Math.sin(dLat/2)**2+Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+// 戻り値: {pts} 成功 / {reason} 失敗（原因診断つき）
+function parseTrack(text){
+  // BOM・先頭空白を除去（DOMParserは<?xml前の文字でparsererrorを出す）
+  text=text.replace(/^\uFEFF/,"").replace(/^[\s\u0000]+/,"");
+  if(!text.startsWith("<"))return{reason:"XMLではありません（先頭が '<' でない）"};
+  let doc;
+  try{doc=new DOMParser().parseFromString(text,"application/xml");}
+  catch(err){return{reason:"XML解析例外: "+err.message};}
+  const pe=doc.getElementsByTagName("parsererror");
+  if(pe.length){
+    const msg=(pe[0].textContent||"").split("\n")[0].slice(0,120);
+    return{reason:"XML構文エラー: "+msg};
+  }
+  const all=[...doc.getElementsByTagName("*")];
+  const isTcx=all.some(x=>x.localName==="Trackpoint");
+  const isGpx=all.some(x=>x.localName==="trkpt");
+  if(!isTcx&&!isGpx){
+    const root=doc.documentElement?doc.documentElement.localName:"?";
+    return{reason:`トラックポイントが見つかりません（ルート要素: <${root}>）。ルートのみのGPXやコース定義ファイルの可能性`};
+  }
+  const pts=isTcx?parseTcx(all):parseGpx(all);
+  if(pts.length<2)return{reason:`有効なポイントが${pts.length}点しかありません（時刻・座標欠損の可能性）`};
+  return{pts};
+}
+function childGetter(node){
+  const kids=[...node.getElementsByTagName("*")];
+  return name=>{const el=kids.find(k=>k.localName===name);return el?el.textContent.trim():null;};
+}
+function parseGpx(all){
+  const tps=all.filter(x=>x.localName==="trkpt");
+  const pts=[];let cum=0,prev=null;
+  for(const tp of tps){
+    const lat=parseFloat(tp.getAttribute("lat")),lon=parseFloat(tp.getAttribute("lon"));
+    const g=childGetter(tp);
+    const time=g("time"),ele=parseFloat(g("ele")),hr=parseFloat(g("hr")),cad=parseFloat(g("cad"));
+    const p={lat,lon,ele:isNaN(ele)?null:ele,t:time?new Date(time).getTime():null,hr:isNaN(hr)?null:hr,cad:isNaN(cad)?null:cad};
+    if(p.t!=null&&isNaN(p.t))p.t=null;
+    if(prev&&!isNaN(lat)&&!isNaN(prev.lat))cum+=haversine(prev,p);
+    p.dist=cum;pts.push(p);if(!isNaN(lat))prev=p;
+  }
+  return pts;
+}
+function parseTcx(all){
+  const tps=all.filter(x=>x.localName==="Trackpoint");
+  const pts=[];
+  for(const tp of tps){
+    const g=childGetter(tp);
+    const time=g("Time"),dist=parseFloat(g("DistanceMeters")),ele=parseFloat(g("AltitudeMeters"));
+    // HeartRateBpm>Value を優先（Extensions内の別Value誤取得を防ぐ）
+    let hr=NaN;
+    const hrEl=[...tp.getElementsByTagName("*")].find(k=>k.localName==="HeartRateBpm");
+    if(hrEl){const v=[...hrEl.getElementsByTagName("*")].find(k=>k.localName==="Value");if(v)hr=parseFloat(v.textContent);}
+    if(isNaN(hr))hr=parseFloat(g("Value"));
+    const cad=parseFloat(g("RunCadence")??g("Cadence"));
+    let t=time?new Date(time).getTime():null;if(t!=null&&isNaN(t))t=null;
+    pts.push({t,dist:isNaN(dist)?null:dist,ele:isNaN(ele)?null:ele,hr:isNaN(hr)?null:hr,cad:isNaN(cad)?null:cad});
+  }
+  let cum=0;for(const p of pts){if(p.dist==null)p.dist=cum;else cum=p.dist;}
+  return pts;
+}
+
+// ── FIT（Garmin/Zepp系バイナリ）内蔵パーサー ─────────────────────
+// 外部ライブラリ非依存。以下に対応:
+//  ・12/14バイトヘッダ、連結FIT（1ファイルに複数FITブロック）
+//  ・リトル/ビッグエンディアン定義メッセージ
+//  ・圧縮タイムスタンプヘッダ（Zepp系が多用。公式JS SDKは非対応）
+//  ・開発者フィールド（読み飛ばし）、invalid値の除外
+const FIT_EPOCH_MS=631065600000; // 1989-12-31T00:00:00Z
+const FIT_SEMI=180/2147483648;   // semicircles → degrees
+const FIT_SPORT_NUM={1:"run",11:"hike",16:"hike",17:"hike",31:"climb"};
+const FIT_BASE_SIZE={0x00:1,0x01:1,0x02:1,0x83:2,0x84:2,0x85:4,0x86:4,0x07:1,0x88:4,0x89:8,0x0A:1,0x8B:2,0x8C:4,0x0D:1,0x8E:8,0x8F:8,0x90:8};
+function fitReadVal(dv,p,base,be){ // 有効値ならnumber、invalid/非対応ならnull
+  const le=!be;
+  switch(base){
+    case 0x00:case 0x02:{const v=dv.getUint8(p);return v===0xFF?null:v;}
+    case 0x01:{const v=dv.getInt8(p);return v===0x7F?null:v;}
+    case 0x83:{const v=dv.getInt16(p,le);return v===0x7FFF?null:v;}
+    case 0x84:{const v=dv.getUint16(p,le);return v===0xFFFF?null:v;}
+    case 0x85:{const v=dv.getInt32(p,le);return v===0x7FFFFFFF?null:v;}
+    case 0x86:{const v=dv.getUint32(p,le);return v===0xFFFFFFFF?null:v;}
+    case 0x88:{const v=dv.getFloat32(p,le);return isNaN(v)?null:v;}
+    case 0x89:{const v=dv.getFloat64(p,le);return isNaN(v)?null:v;}
+    case 0x0A:{const v=dv.getUint8(p);return v===0?null:v;}
+    case 0x8B:{const v=dv.getUint16(p,le);return v===0?null:v;}
+    case 0x8C:{const v=dv.getUint32(p,le);return v===0?null:v;}
+    default:return null; // string/byte/64bitは対象フィールドに無い
+  }
+}
+// 戻り値: {pts, sportHint} / {reason}
+function parseFit(arrayBuffer){
+  const u8=new Uint8Array(arrayBuffer);
+  const dv=new DataView(arrayBuffer);
+  const rawRecs=[];let sportCode=null;
+  const isHeaderAt=q=>q+12<=u8.length&&(u8[q]===12||u8[q]===14)
+    &&u8[q+8]===0x2E&&u8[q+9]===0x46&&u8[q+10]===0x49&&u8[q+11]===0x54; // ".FIT"
+  if(!isHeaderAt(0))return{reason:"FITヘッダが不正です"};
+  let pos=0;
+  while(isHeaderAt(pos)){ // 連結FITブロックを順に処理
+    const hSize=u8[pos];
+    const dataSize=dv.getUint32(pos+4,true);
+    let p=pos+hSize;
+    const blockEnd=Math.min(p+dataSize,u8.length);
+    const defs={};   // localType → {be,gnum,fields,devSize}
+    let lastTs=null; // 圧縮タイムスタンプの基準値
+    const readData=(d,q,forcedTs)=>{
+      const want=d.gnum===20||d.gnum===18||d.gnum===12;
+      const vals=want?{}:null;
+      for(const f of d.fields){
+        if(q+f.size>blockEnd)return blockEnd;
+        // sizeがベース型サイズと一致する単一値のみ読む（配列フィールドは対象外）
+        if(f.size===FIT_BASE_SIZE[f.base]){
+          const v=fitReadVal(dv,q,f.base,d.be);
+          if(v!=null){
+            if(f.num===253)lastTs=v; // どのメッセージのtimestampも圧縮TSの基準になる
+            if(vals)vals[f.num]=v;
+          }
+        }
+        q+=f.size;
+      }
+      q+=d.devSize;
+      if(d.gnum===20&&vals){
+        const ts=vals[253]!=null?vals[253]:forcedTs;
+        rawRecs.push({ts,lat:vals[0],lon:vals[1],alt:vals[2],hr:vals[3],cad:vals[4],dist:vals[5],ealt:vals[78]});
+      }else if(d.gnum===18&&vals&&vals[5]!=null){sportCode=vals[5];}
+      else if(d.gnum===12&&vals&&vals[0]!=null&&sportCode==null){sportCode=vals[0];}
+      return q;
+    };
+    while(p<blockEnd){
+      const hdr=u8[p++];
+      if(hdr&0x80){ // 圧縮タイムスタンプ付きデータメッセージ
+        const d=defs[(hdr>>5)&0x3];
+        if(!d)break; // 未定義localType→ブロック破損とみなし中断
+        if(lastTs!=null){
+          const off=hdr&0x1F;
+          lastTs=(lastTs&~0x1F)+off+(off<(lastTs&0x1F)?0x20:0);
+        }
+        p=readData(d,p,lastTs);
+      }else if(hdr&0x40){ // 定義メッセージ
+        if(p+5>blockEnd)break;
+        const local=hdr&0xF,hasDev=!!(hdr&0x20);
+        const be=u8[p+1]===1;
+        const gnum=be?dv.getUint16(p+2,false):dv.getUint16(p+2,true);
+        const n=u8[p+4];p+=5;
+        if(p+n*3>blockEnd)break;
+        const fields=[];
+        for(let i=0;i<n;i++){fields.push({num:u8[p],size:u8[p+1],base:u8[p+2]});p+=3;}
+        let devSize=0;
+        if(hasDev){
+          if(p>=blockEnd)break;
+          const dn=u8[p++];
+          if(p+dn*3>blockEnd)break;
+          for(let i=0;i<dn;i++){devSize+=u8[p+1];p+=3;}
+        }
+        defs[local]={be,gnum,fields,devSize};
+      }else{ // 通常データメッセージ
+        const d=defs[hdr&0xF];
+        if(!d)break;
+        p=readData(d,p,null);
+      }
+    }
+    pos=pos+hSize+dataSize+2; // 末尾CRCを飛ばして次ブロックへ
+  }
+  if(rawRecs.length<2)return{reason:`recordメッセージが${rawRecs.length}件のみです（FITとして認識しましたが軌跡データがありません）`};
+  const pts=[];let cum=0,prev=null;
+  for(const r of rawRecs){
+    const lat=r.lat!=null?r.lat*FIT_SEMI:NaN;
+    const lon=r.lon!=null?r.lon*FIT_SEMI:NaN;
+    const ele=r.ealt!=null?r.ealt/5-500:(r.alt!=null?r.alt/5-500:null); // scale5 offset500
+    const p={lat,lon,ele,
+      t:r.ts!=null?r.ts*1000+FIT_EPOCH_MS:null,
+      hr:r.hr>0?r.hr:null,cad:r.cad>0?r.cad:null,
+      dist:r.dist!=null?r.dist/100:null}; // scale100 → m
+    if(p.dist==null){
+      if(prev&&!isNaN(lat)&&!isNaN(prev.lat))cum+=haversine(prev,p);
+      p.dist=cum;
+    }else cum=p.dist;
+    pts.push(p);if(!isNaN(lat))prev=p;
+  }
+  return{pts,sportHint:sportCode!=null?FIT_SPORT_NUM[sportCode]||null:null};
+}
+
+// ── ファイル読み込みディスパッチ ─────────────────────────────────
+// 拡張子に頼らず内容で判定（iOSは.tcx等の拡張子をファイル選択で弾くことがあるためacceptも緩和済み）
+const isGzip=u8=>u8.length>2&&u8[0]===0x1f&&u8[1]===0x8b;
+const isFitBuf=u8=>u8.length>12&&u8[8]===0x2e&&u8[9]===0x46&&u8[10]===0x49&&u8[11]===0x54; // ".FIT"
+async function gunzip(u8){
+  if(typeof DecompressionStream==="undefined")throw new Error("この環境はgzip展開に非対応です");
+  const ds=new DecompressionStream("gzip");
+  const resp=new Response(new Blob([u8]).stream().pipeThrough(ds));
+  return new Uint8Array(await resp.arrayBuffer());
+}
+// 戻り値: {kind:"track",pts,sportHint} | {kind:"csv",text} | {kind:"error",reason}
+async function readActivityFile(file){
+  let u8;
+  try{u8=new Uint8Array(await file.arrayBuffer());}
+  catch(err){return{kind:"error",reason:"ファイルを読み込めませんでした: "+err.message};}
+  try{if(isGzip(u8))u8=await gunzip(u8);}
+  catch(err){return{kind:"error",reason:"gzip展開に失敗: "+err.message};}
+  if(isFitBuf(u8)){
+    const r=await parseFit(u8.buffer);
+    return r.pts?{kind:"track",pts:r.pts,sportHint:r.sportHint}:{kind:"error",reason:r.reason};
+  }
+  const text=new TextDecoder("utf-8").decode(u8);
+  const head=text.replace(/^\uFEFF/,"").trimStart();
+  if(head.startsWith("<")){
+    const r=parseTrack(text);
+    return r.pts?{kind:"track",pts:r.pts,sportHint:null}:{kind:"error",reason:r.reason};
+  }
+  if(/\.csv$/i.test(file.name)||head.includes(","))return{kind:"csv",text};
+  return{kind:"error",reason:"形式を判定できません（GPX/TCX/FIT/CSVのいずれでもない）"};
+}
+function downsample(arr,n){if(arr.length<=n)return arr;const out=[];const step=arr.length/n;for(let i=0;i<n;i++)out.push(arr[Math.floor(i*step)]);return out;}
+function summarizeTrack(pts){
+  const totalDist=pts.length?pts[pts.length-1].dist||0:0;
+  const withT=pts.filter(p=>p.t!=null);
+  const dur=withT.length>1?(withT[withT.length-1].t-withT[0].t)/1000:0;
+  const startDate=withT.length?new Date(withT[0].t).toISOString().slice(0,10):today();
+  let gain=0,lastEle=null;
+  pts.forEach(p=>{if(p.ele!=null){if(lastEle!=null&&p.ele-lastEle>0.4)gain+=p.ele-lastEle;lastEle=p.ele;}});
+  const hrs=pts.map(p=>p.hr).filter(h=>h>0);
+  const avgHr=hrs.length?Math.round(mean(hrs)):null;
+  const maxHrPeak=hrs.length?Math.max(...hrs):null;
+  const cads=pts.map(p=>p.cad).filter(c=>c>0);
+  const spmFactor=cads.length&&median(cads)<120?2:1;
+  const avgCadence=cads.length?Math.round(median(cads)*spmFactor):null;
+  const avgSpd=dur>0?totalDist/dur:0;
+  const paceSec=avgSpd>0?1000/avgSpd:null;
+  const avgStride=avgCadence&&avgSpd?Math.round((avgSpd/(avgCadence/60))*100)/100:null;
+  const pairs=[];let movingSec=0;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    if(a.t==null||b.t==null)continue;
+    const dt=(b.t-a.t)/1000;if(dt<=0||dt>20)continue;
+    const sp=(b.dist-a.dist)/dt;if(sp<0.4)continue;
+    movingSec+=dt;if(a.hr>0)pairs.push({sp,hr:a.hr});
+  }
+  let decoupling=null;
+  if(pairs.length>20){
+    const h=Math.floor(pairs.length/2);
+    const eff=arr=>mean(arr.map(p=>p.sp))/mean(arr.map(p=>p.hr));
+    const e1=eff(pairs.slice(0,h)),e2=eff(pairs.slice(h));
+    if(e1>0)decoupling=Math.round(((e1-e2)/e1)*1000)/10;
+  }
+  const hrSeries=downsample(pts.filter(p=>p.hr>0).map(p=>p.hr),120);
+  const valid=pts.filter(p=>p.t!=null);
+  const rawSpeed=valid.map((p,i)=>{if(i===0)return 0;const a=valid[i-1];const dt=(p.t-a.t)/1000;const dd=p.dist-a.dist;return dt>0?dd/dt:0;});
+  const W=8;const series=[];
+  for(let i=0;i<valid.length;i++){
+    let s=0,c=0;for(let j=Math.max(0,i-W);j<=Math.min(valid.length-1,i+W);j++){s+=rawSpeed[j];c++;}
+    const sp=c?s/c:0;
+    series.push({km:Math.round((valid[i].dist/1000)*100)/100,pace:sp>0.4?Math.round(1000/sp):null,hr:valid[i].hr||null,ele:valid[i].ele!=null?Math.round(valid[i].ele):null});
+  }
+  const laps=[];let lapKm=1,lapStartT=valid.length?valid[0].t:0,lapStartEle=null,lapHr=[];
+  for(const p of valid){
+    if(lapStartEle==null&&p.ele!=null)lapStartEle=p.ele;
+    if(p.hr>0)lapHr.push(p.hr);
+    if(p.dist>=lapKm*1000){
+      const sec=(p.t-lapStartT)/1000;
+      laps.push({km:lapKm,paceSec:Math.round(sec),avgHr:lapHr.length?Math.round(mean(lapHr)):null,gain:lapStartEle!=null&&p.ele!=null?Math.max(0,Math.round(p.ele-lapStartEle)):null});
+      lapKm++;lapStartT=p.t;lapStartEle=p.ele;lapHr=[];
+    }
+  }
+  const gainPerKm=totalDist>0?gain/(totalDist/1000):0;
+  const sportGuess=(avgSpd>0&&avgSpd<1.7)||gainPerKm>90?"hike":"run";
+  return{date:startDate,sportGuess,distKm:Math.round(totalDist/100)/10,durMin:Math.round(dur/60)||1,gain:Math.round(gain),avgHr,maxHrPeak,avgCadence,avgStride,paceSec,decoupling,hrSeries,hrSeriesSec:movingSec||dur,series:downsample(series,120),laps};
+}
+function zonesFromSeries(series,totalSec,maxHr){
+  const secs=[0,0,0,0,0];if(!series||!series.length)return secs;
+  const per=totalSec/series.length;
+  series.forEach(hr=>{const f=hr/maxHr;let z=4;for(let i=0;i<5;i++){if(f<ZONE_DEFS[i].hi){z=i;break;}}secs[z]+=per;});
+  return secs;
+}
+
+// ── ELO ──────────────────────────────────────────────────────────
+function eloSeries(entries,disc){
+  const sends=[];
+  entries.filter(e=>e.sport==="climb").forEach(e=>(e.sends||[]).forEach(s=>{if(s.discipline===disc)sends.push({...s,date:e.date});}));
+  sends.sort((a,b)=>a.date<b.date?-1:1);
+  let R=1200;const K=26;const out=[];
+  sends.forEach(s=>{
+    const P=1000+s.idx*100;
+    const E=1/(1+Math.pow(10,(P-R)/400));
+    const win=s.result==="プロジェクト"?0:1;
+    R+=K*(win-E);
+    out.push({date:s.date.slice(5),elo:Math.round(R)});
+  });
+  return{series:out,rating:Math.round(R),n:sends.length};
+}
+
+// ── Suggestions ──────────────────────────────────────────────────
+function buildSuggestions(entries,goals,settings){
+  const t=today();const out=[];
+  if(!entries.length)return out;
+  const load=computeLoad(entries);
+  const dates=[...new Set(entries.map(e=>e.date))].sort();
+  const recent=dates[dates.length-1];
+  let streak=0;
+  if(recent&&daysBetween(recent,t)<=1){
+    let d=recent;const set=new Set(dates);
+    while(set.has(d)){streak++;const x=parseD(d);x.setDate(x.getDate()-1);d=x.toISOString().slice(0,10);}
+  }
+  const lastBySport={};
+  entries.forEach(e=>{if(!lastBySport[e.sport]||e.date>lastBySport[e.sport])lastBySport[e.sport]=e.date;});
+  if(load.acwr>1.5)out.push({p:1,color:C.bad,tag:"回復",title:"今週は負荷を落とす",detail:`ACWR ${load.acwr.toFixed(2)}。1–2日は休養かZ1で。`});
+  else if(load.acwr>1.3)out.push({p:2,color:C.warn,tag:"注意",title:"増やしすぎに注意",detail:`ACWR ${load.acwr.toFixed(2)}。急増は避けましょう。`});
+  if(streak>=6)out.push({p:1,color:C.warn,tag:"休養",title:"休息日を入れる",detail:`${streak}日連続中。完全休養を1日とると超回復が進みます。`});
+  if(load.chronic>0&&load.acwr>0&&load.acwr<0.8)out.push({p:3,color:C.info,tag:"ビルド",title:"少しずつ量を戻せる",detail:"週あたり10%程度なら安全に増やせます。"});
+  const recentRuns=entries.filter(e=>e.sport==="run"&&e.runType&&daysBetween(e.date,t)<21);
+  if(recentRuns.length>=4){
+    const easy=recentRuns.filter(e=>!HARD_RUN.has(e.runType)&&e.runType!=="その他").length;
+    const hard=recentRuns.filter(e=>HARD_RUN.has(e.runType)).length;
+    const pct=easy+hard?easy/(easy+hard):1;
+    if(pct<0.7)out.push({p:2,color:C.run,tag:"ランニング",title:"イージーを増やす",detail:`イージー比率${Math.round(pct*100)}%。Z1–2を8割目安に。`});
+    else if(hard===0&&load.acwr<=1.3)out.push({p:4,color:C.run,tag:"ランニング",title:"質の高い1本を",detail:"テンポ走かインターバルを1本入れると刺激になります。"});
+  }
+  Object.keys(lastBySport).forEach(sp=>{
+    const gap=daysBetween(lastBySport[sp],t);
+    const si=sportOf(sp);
+    if(gap>=14)out.push({p:3,color:si.color,tag:si.label,title:`${si.label}が${gap}日空いている`,detail:"短時間でも一度触れておくと維持できます。"});
+  });
+  const acc={};
+  entries.filter(e=>e.sport==="climb").forEach(e=>(e.sends||[]).forEach(s=>s.tags.forEach(tg=>{acc[tg]=acc[tg]||{total:0,done:0};acc[tg].total++;if(s.result!=="プロジェクト")acc[tg].done++;})));
+  const weak=Object.entries(acc).filter(([,v])=>v.total>=3).map(([tg,v])=>({tg,rate:v.done/v.total})).sort((a,b)=>a.rate-b.rate)[0];
+  if(weak&&weak.rate<0.55)out.push({p:3,color:C.climb,tag:"クライミング",title:`苦手な「${weak.tg}」を攻める`,detail:`完登率${Math.round(weak.rate*100)}%。次は${weak.tg}系を中心に。`});
+  goals.forEach(g=>{
+    if(!g.deadline)return;const left=daysBetween(t,g.deadline);if(left<0||left>30)return;
+    const cur=goalCurrent(g,entries);
+    const pct=g.metric==="manual"?(g.manual||0):Math.min(100,Math.round((cur/(g.target||1))*100));
+    if(pct<70)out.push({p:2,color:g.sportColor||C.info,tag:"目標",title:`「${g.title||""}」まで残り${left}日`,detail:`進捗 ${pct}%。`});
+  });
+  if(!out.length)out.push({p:5,color:C.good,tag:"良好",title:"バランス良好。継続を",detail:"負荷・強度配分ともに適正です。"});
+  out.sort((a,b)=>a.p-b.p);return out.slice(0,4);
+}
+function goalCurrent(g,entries){
+  const t=today();
+  if(g.metric==="run_week_km")return sumKey(entries.filter(e=>e.sport==="run"&&weekStart(e.date)===weekStart(t)),"distance");
+  if(g.metric==="run_month_km")return sumKey(entries.filter(e=>e.sport==="run"&&monthKey(e.date)===monthKey(t)),"distance");
+  if(g.metric==="hike_month_elev")return sumKey(entries.filter(e=>e.sport==="hike"&&monthKey(e.date)===monthKey(t)),"elevGain");
+  if(g.metric==="climb_max_boulder"){let m=-1;entries.filter(e=>e.sport==="climb").forEach(e=>(e.sends||[]).forEach(s=>{if(s.discipline==="boulder"&&s.result!=="プロジェクト")m=Math.max(m,s.idx);}));return m;}
+  if(g.metric==="climb_elo")return eloSeries(entries,"boulder").rating;
+  if(g.metric==="sessions_30d")return entries.filter(e=>{const d=daysBetween(e.date,t);return d>=0&&d<30;}).length;
+  if(g.metric==="manual")return g.manual||0;
+  return 0;
+}
+
+// ── SVG Charts (自作・外部ライブラリ不要) ─────────────────────────
+function BarChartSVG({data,dataKey,labelKey,color,height=150,formatter}){
+  const vals=data.map(d=>d[dataKey]||0);
+  const mx=Math.max(...vals,1);
+  const W=100/data.length;
+  return e("svg",{viewBox:`0 0 100 ${height}`,style:{width:"100%",height},preserveAspectRatio:"none"},
+    // gridlines
+    [0.25,0.5,0.75,1].map(f=>e("line",{key:f,x1:0,y1:height*(1-f),x2:100,y2:height*(1-f),stroke:C.line,strokeWidth:0.3})),
+    // bars
+    data.map((d,i)=>{
+      const v=d[dataKey]||0;
+      const bh=Math.max(0,(v/mx)*(height-14));
+      const x=i*W+W*0.1,w=W*0.8,y=height-bh-2;
+      return e(Fragment,{key:i},
+        e("rect",{x,y,width:w,height:bh,fill:color,rx:1.5}),
+        e("text",{x:x+w/2,y:height-0.5,textAnchor:"middle",fill:C.faint,fontSize:5,fontFamily:"var(--mono)"},d[labelKey]||"")
+      );
+    })
+  );
+}
+function LineChartSVG({data,lines,height=150}){
+  // lines=[{key,color,dashed}]
+  const allVals=lines.flatMap(l=>data.map(d=>d[l.key]).filter(v=>v!=null));
+  if(!allVals.length)return null;
+  const mn=Math.min(...allVals),mx=Math.max(...allVals);
+  const range=mx-mn||1;
+  const px=(v)=>((v-mn)/range)*(height-8)+4;
+  const points=(key)=>data.map((d,i)=>d[key]!=null?[i/(data.length-1)*100,(height-px(d[key])).toFixed(2)]:null).filter(Boolean);
+  return e("svg",{viewBox:`0 0 100 ${height}`,style:{width:"100%",height},preserveAspectRatio:"none"},
+    [0.25,0.5,0.75].map(f=>e("line",{key:f,x1:0,y1:height*f,x2:100,y2:height*f,stroke:C.line,strokeWidth:0.3})),
+    lines.map(l=>{
+      const pts=points(l.key);if(pts.length<2)return null;
+      const d="M"+pts.map(([x,y])=>`${x},${y}`).join("L");
+      return e("path",{key:l.key,d,stroke:l.color,strokeWidth:1.8,fill:"none",strokeDasharray:l.dashed?"3,2":undefined});
+    })
+  );
+}
+function GaugeSVG({ratio,status}){
+  const max=2,cx=100,cy=100,r=78,a0=-135,a1=135;
+  const ang=v=>a0+(Math.max(0,Math.min(max,v))/max)*(a1-a0);
+  const polar=a=>{const rad=(a-90)*Math.PI/180;return[cx+r*Math.cos(rad),cy+r*Math.sin(rad)];};
+  const arc=(s,en)=>{const[x0,y0]=polar(s),[x1,y1]=polar(en);return`M ${x0} ${y0} A ${r} ${r} 0 ${en-s>180?1:0} 1 ${x1} ${y1}`;};
+  const bands=[[a0,ang(0.8),C.info],[ang(0.8),ang(1.3),C.good],[ang(1.3),ang(1.5),C.warn],[ang(1.5),a1,C.bad]];
+  const[nx,ny]=polar(ang(ratio));
+  return e("div",{style:{textAlign:"center"}},
+    e("svg",{width:200,height:138,viewBox:"0 0 200 138"},
+      bands.map(([s,en,col],i)=>e("path",{key:i,d:arc(s,en),stroke:col,strokeWidth:11,fill:"none",opacity:0.92})),
+      ratio>0&&e(Fragment,null,
+        e("line",{x1:cx,y1:cy,x2:nx,y2:ny,stroke:C.text,strokeWidth:2.5,strokeLinecap:"round"}),
+        e("circle",{cx,cy,r:5,fill:C.text})
+      ),
+      e("text",{x:cx,y:cy-16,textAnchor:"middle",fill:status.color,style:{fontFamily:"var(--mono)",fontSize:30,fontWeight:700}},ratio?ratio.toFixed(2):"—"),
+      e("text",{x:polar(a0)[0]-2,y:polar(a0)[1]+16,textAnchor:"middle",fill:C.faint,style:{fontFamily:"var(--mono)",fontSize:10}},"0"),
+      e("text",{x:polar(a1)[0]+2,y:polar(a1)[1]+16,textAnchor:"middle",fill:C.faint,style:{fontFamily:"var(--mono)",fontSize:10}},"2.0")
+    )
+  );
+}
+// 横棒グラフ（クライミング pyramid）
+function HBarChartSVG({data,dataKey,labelKey,color,height}){
+  const vals=data.map(d=>d[dataKey]||0);
+  const mx=Math.max(...vals,1);
+  const rh=Math.max(22,height/data.length);
+  const totalH=rh*data.length;
+  return e("svg",{viewBox:`0 0 100 ${totalH}`,style:{width:"100%",height:totalH},preserveAspectRatio:"none"},
+    data.map((d,i)=>{
+      const v=d[dataKey]||0,bw=(v/mx)*72,y=i*rh+rh*0.1,bh=rh*0.8;
+      return e(Fragment,{key:i},
+        e("rect",{x:0,y,width:bw,height:bh,fill:color,rx:1.5}),
+        e("text",{x:bw+1.5,y:y+bh*0.72,fill:C.muted,fontSize:Math.min(6,bh*0.7),fontFamily:"var(--mono)"},v),
+        e("text",{x:100,y:y+bh*0.72,textAnchor:"end",fill:C.text,fontSize:Math.min(6,bh*0.7),fontFamily:"var(--mono)"},d[labelKey]||"")
+      );
+    })
+  );
+}
+
+// ── UI Atoms ─────────────────────────────────────────────────────
+const IS={width:"100%",boxSizing:"border-box",background:C.raised,color:C.text,border:`1px solid ${C.line2}`,borderRadius:9,padding:"10px 11px",fontSize:15,fontFamily:"var(--sans)",outline:"none"};
+function Panel({children,style}){return e("div",{style:{background:C.panel,border:`1px solid ${C.line}`,borderRadius:14,padding:16,...style}},children);}
+function Eyebrow({children,color=C.faint}){return e("div",{style:{fontFamily:"var(--mono)",fontSize:10.5,letterSpacing:2,textTransform:"uppercase",color}},children);}
+function Stat({label,value,sub,color=C.text}){
+  return e("div",null,
+    e(Eyebrow,null,label),
+    e("div",{style:{fontFamily:"var(--mono)",fontSize:24,fontWeight:600,color,lineHeight:1.1,marginTop:4}},value),
+    sub&&e("div",{style:{fontSize:11,color:C.muted,marginTop:2}},sub)
+  );
+}
+function Field({label,children}){return e("label",{style:{display:"block",marginBottom:12}},e("div",{style:{fontSize:12,color:C.muted,marginBottom:5}},label),children);}
+function TI(p){return e("input",{...p,className:"cin",style:{...IS,...p.style}});}
+function Sel({children,...p}){return e("select",{...p,className:"cin",style:{...IS,appearance:"none",...p.style}},children);}
+function Btn({children,onClick,kind="ghost",color=C.text,style,type}){
+  const k={solid:{background:color,color:C.bg,border:"none"},ghost:{background:C.raised,color:C.text,border:`1px solid ${C.line2}`},line:{background:"transparent",color,border:`1px solid ${color}`}};
+  return e("button",{type:type||"button",onClick,className:"cbtn",style:{borderRadius:9,padding:"10px 14px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"var(--sans)",...k[kind],...style}},children);
+}
+function Chip({active,color,onClick,children}){
+  return e("button",{onClick,className:"cchip",style:{border:`1px solid ${active?color:C.line2}`,background:active?color+"26":"transparent",color:active?color:C.muted,borderRadius:999,padding:"6px 11px",fontSize:12.5,cursor:"pointer",fontFamily:"var(--sans)"}},children);
+}
+function ZoneBar({zones}){
+  const tot=zones.reduce((a,b)=>a+b,0);if(!tot)return null;
+  return e("div",{style:{display:"flex",height:5,borderRadius:3,overflow:"hidden",marginTop:7,background:C.raised}},
+    zones.map((s,i)=>s>0?e("div",{key:i,style:{width:`${(s/tot)*100}%`,background:ZONE_DEFS[i].c}}):null)
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────
+function App({fb,user}){
+  const [tab,setTab]=useState("log");
+  const [entries,setEntries]=useState([]);
+  const [goals,setGoals]=useState([]);
+  const [settings,setSettings]=useState({maxHr:190});
+  const [wellness,setWellness]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+  const [showData,setShowData]=useState(false);
+  const [notice,setNotice]=useState(null);
+  const [hrvAlert,setHrvAlert]=useState(null); // 起動時の体調異常バナー
+
+  setCustomSports(settings.customSports||[]); // レジストリを常に最新に（冪等）
+
+  useEffect(()=>{(async()=>{
+    try{
+      const mig=await migrateLocalToCloud(fb,user.uid);
+      const d=await loadCloud(fb);
+      setEntries(d.entries);setGoals(d.goals);setSettings(d.settings);setWellness(d.wellness);
+      setCustomSports((d.settings&&d.settings.customSports)||[]);
+      if(mig.migrated)setNotice(`ローカルデータ ${mig.count}件をクラウドへ移行しました`);
+      setHrvAlert(hrvAnomaly(d.wellness)); // アプリを開いた瞬間の体調アラート判定
+      pushHub(fb,d.entries,d.wellness);
+    }catch(err){
+      console.warn(err);
+      setNotice("クラウド読み込みに失敗しました: "+((err&&err.message)||err));
+    }
+    setLoaded(true);
+  })();},[]);
+
+  const saveEntries=n=>{setEntries(n);syncEntries(fb,n).catch(err=>console.warn("entry sync:",err));pushHub(fb,n,wellness);};
+  const saveGoals=n=>{setGoals(n);fb.setDocIn(COLL_META,"goals",{items:clean(n)}).catch(err=>console.warn("goals sync:",err));};
+  const saveSettings=n=>{setSettings(n);setCustomSports(n.customSports||[]);fb.setDocIn(COLL_META,"settings",clean(n)).catch(err=>console.warn("settings sync:",err));};
+  // 体調記録：1日1ドキュメント（docId=日付）のupsert
+  const saveWellness=w=>{
+    const next=[...wellness.filter(x=>x.date!==w.date),{...w,updatedAt:new Date().toISOString()}].sort((a,b)=>a.date<b.date?-1:1);
+    setWellness(next);
+    fb.setDocIn(COLL_WELLNESS,w.date,clean(next.find(x=>x.date===w.date))).catch(err=>console.warn("wellness sync:",err));
+    pushHub(fb,entries,next);
+  };
+  const deleteWellness=date=>{
+    const next=wellness.filter(x=>x.date!==date);
+    setWellness(next);
+    fb.deleteDocIn(COLL_WELLNESS,date).catch(err=>console.warn("wellness del:",err));
+    pushHub(fb,entries,next);
+  };
+  // まとめ書き（Apple Health取り込み・バックアップ復元用）
+  const replaceWellness=list=>{
+    const cleanList=(list||[]).filter(x=>x&&x.date).sort((a,b)=>a.date<b.date?-1:1);
+    const newDates=new Set(cleanList.map(x=>x.date));
+    const dels=wellness.filter(x=>!newDates.has(x.date)).map(x=>x.date);
+    setWellness(cleanList);
+    fb.batchWrite(COLL_WELLNESS,cleanList.map(x=>({id:x.date,data:clean(x)})),dels)
+      .catch(err=>console.warn("wellness batch:",err));
+    pushHub(fb,entries,cleanList);
+    setHrvAlert(hrvAnomaly(cleanList));
+  };
+  // 取り込み結果を既存とマージ（手動入力のHRVを優先）
+  const mergeWellness=imported=>{
+    const byDate=new Map(wellness.map(x=>[x.date,x]));
+    let added=0,updated=0;const changed=[];
+    imported.forEach(im=>{
+      const cur=byDate.get(im.date);
+      if(!cur){const rec={...im,updatedAt:new Date().toISOString()};byDate.set(im.date,rec);changed.push(rec);added++;return;}
+      const merged={...cur};let ch=false;
+      ["sleepMin","deepMin","remMin","coreMin","sleepSource"].forEach(k=>{if(im[k]!=null&&im[k]!==cur[k]){merged[k]=im[k];ch=true;}});
+      if(im.rhr!=null&&im.rhr!==cur.rhr){merged.rhr=im.rhr;ch=true;}
+      if(im.hrv!=null&&cur.hrvSource!=="manual"&&im.hrv!==cur.hrv){merged.hrv=im.hrv;merged.hrvSource="import";ch=true;}
+      if(ch){merged.updatedAt=new Date().toISOString();byDate.set(im.date,merged);changed.push(merged);updated++;}
+    });
+    const next=[...byDate.values()].sort((a,b)=>a.date<b.date?-1:1);
+    setWellness(next);
+    // 変更があった日のドキュメントだけをバッチ書き込み（再取り込み時の無駄な全件書き込みを防ぐ）
+    if(changed.length)fb.batchWrite(COLL_WELLNESS,changed.map(x=>({id:x.date,data:clean(x)})),[])
+      .catch(err=>console.warn("wellness batch:",err));
+    pushHub(fb,entries,next);
+    setHrvAlert(hrvAnomaly(next));
+    return{added,updated};
+  };
+  const sorted=useMemo(()=>[...entries].sort((a,b)=>a.date<b.date?1:-1),[entries]);
+  const TABS=[{k:"log",label:"記録"},{k:"dash",label:"ダッシュ"},{k:"well",label:"体調"},{k:"analysis",label:"分析"},{k:"goals",label:"目標"}];
+
+  return e("div",{style:{minHeight:"100vh",background:C.bg,color:C.text,paddingBottom:78}},
+    e("header",{style:{paddingTop:"max(18px,env(safe-area-inset-top))",padding:"max(18px,env(safe-area-inset-top)) 16px 10px",display:"flex",alignItems:"center",justifyContent:"space-between",maxWidth:760,margin:"0 auto"}},
+      e("div",{style:{display:"flex",alignItems:"center",gap:11}},
+        e("svg",{width:30,height:34,viewBox:"0 0 30 34",fill:"none"},
+          e("ellipse",{cx:15,cy:25.5,rx:9.5,ry:3.4,fill:C.line2}),
+          e("rect",{x:6,y:18.5,width:18,height:5.4,rx:2.6,fill:C.hike}),
+          e("rect",{x:8.5,y:12.5,width:13,height:5,rx:2.4,fill:C.run}),
+          e("rect",{x:10.5,y:7,width:9,height:4.6,rx:2.2,fill:C.climb}),
+          e("circle",{cx:15,cy:3.4,r:2.4,fill:C.text})
+        ),
+        e("div",null,
+          e("div",{style:{fontFamily:"var(--mono)",fontSize:10,letterSpacing:3,color:C.faint}},"ケルン / TRAINING LOG"),
+          e("div",{style:{fontSize:20,fontWeight:700,letterSpacing:1,lineHeight:1}},"CAIRN")
+        )
+      ),
+      e(Btn,{kind:"ghost",onClick:()=>setShowData(true),style:{padding:"8px 11px",fontSize:13}},"データ")
+    ),
+    hrvAlert&&e("div",{style:{maxWidth:760,margin:"0 auto",padding:"0 16px"}},
+      e("div",{style:{display:"flex",gap:10,alignItems:"flex-start",border:`1px solid ${hrvAlert.type==="low"?C.bad:C.info}`,background:(hrvAlert.type==="low"?C.bad:C.info)+"18",borderRadius:12,padding:"11px 13px",marginBottom:10}},
+        e("span",{style:{fontSize:16,lineHeight:1.2}},hrvAlert.type==="low"?"⚠️":"💪"),
+        e("div",{style:{flex:1}},
+          e("div",{style:{fontSize:13.5,fontWeight:700,color:hrvAlert.type==="low"?C.bad:C.info}},
+            hrvAlert.type==="low"?`HRV低下：${hrvAlert.value}ms（7日平均${hrvAlert.baseline}msより−${hrvAlert.pct}%）`:`HRV良好：${hrvAlert.value}ms（7日平均より+${hrvAlert.pct}%）`),
+          e("div",{style:{fontSize:12,color:C.muted,marginTop:2,lineHeight:1.5}},
+            hrvAlert.type==="low"?"回復を優先する日に。高強度トレーニングは避けるのが無難です。":"状態良好。質の高いセッションを入れるチャンスです。")
+        ),
+        e("button",{onClick:()=>setHrvAlert(null),style:{background:"none",border:"none",color:C.faint,fontSize:17,cursor:"pointer",padding:2}},"×")
+      )
+    ),
+    e("main",{style:{maxWidth:760,margin:"0 auto",padding:"6px 16px 24px"}},
+      !loaded?e("div",{style:{color:C.muted,padding:40,textAlign:"center"}},"読み込み中…")
+      :tab==="log"?e(LogTab,{entries:sorted,saveEntries,settings,saveSettings})
+      :tab==="dash"?e(DashTab,{entries,goals,settings})
+      :tab==="well"?e(WellnessTab,{wellness,entries,saveWellness,deleteWellness,mergeWellness})
+      :tab==="analysis"?e(AnalysisTab,{entries,settings})
+      :e(GoalsTab,{entries,goals,saveGoals})
+    ),
+    e("nav",{style:{position:"fixed",bottom:0,left:0,right:0,background:C.panel+"f2",borderTop:`1px solid ${C.line}`,backdropFilter:"blur(8px)",display:"flex",paddingBottom:"max(14px,env(safe-area-inset-bottom))"}},
+      TABS.map(t=>e("button",{key:t.k,onClick:()=>setTab(t.k),style:{flex:1,background:"none",border:"none",cursor:"pointer",padding:"11px 0 10px",fontFamily:"var(--sans)",color:tab===t.k?C.text:C.faint,fontSize:12.5,fontWeight:tab===t.k?700:500,borderTop:`2px solid ${tab===t.k?C.info:"transparent"}`,marginTop:-1}},t.label))
+    ),
+    notice&&e("div",{onClick:()=>setNotice(null),style:{position:"fixed",left:16,right:16,bottom:86,zIndex:60,maxWidth:520,margin:"0 auto",background:C.raised,border:`1px solid ${C.line2}`,borderRadius:12,padding:"12px 14px",fontSize:13,color:C.text,boxShadow:"0 8px 24px #0008",cursor:"pointer"}},
+      notice,e("span",{style:{color:C.faint,marginLeft:8,fontSize:11}},"タップで閉じる")),
+    showData&&e(DataModal,{fb,user,entries,goals,settings,wellness,replaceWellness,onClose:()=>setShowData(false),saveEntries,saveGoals,saveSettings})
+  );
+}
+
+// ── LogTab ────────────────────────────────────────────────────────
+function LogTab({entries,saveEntries,settings,saveSettings}){
+  const [open,setOpen]=useState(false);
+  const [detail,setDetail]=useState(null);
+  const [imports,setImports]=useState(null);
+  const [csvImport,setCsvImport]=useState(null);
+  const fileRef=useRef(null);
+  const addEntry=ev=>{saveEntries([{...ev,id:uid()},...entries]);setOpen(false);};
+  const del=id=>saveEntries(entries.filter(x=>x.id!==id));
+  const handleFiles=async ev=>{
+    const files=[...ev.target.files];ev.target.value="";if(!files.length)return;
+    const drafts=[];let csvText=null;
+    for(const f of files){
+      const r=await readActivityFile(f);
+      if(r.kind==="track"){
+        const m=summarizeTrack(r.pts);
+        drafts.push({filename:f.name,metrics:m,sport:r.sportHint||m.sportGuess,rpe:5,runType:"イージー"});
+      }else if(r.kind==="csv"&&!csvText){
+        csvText={name:f.name,text:r.text}; // CSVは列マッピング画面へ
+      }else{
+        drafts.push({filename:f.name,error:true,reason:r.reason||"不明なエラー"});
+      }
+    }
+    drafts.sort((a,b)=>(a.metrics?.date||"")<(b.metrics?.date||"")?-1:1);
+    if(drafts.length)setImports(drafts);
+    if(csvText)setCsvImport(csvText);
+  };
+  const commitImports=drafts=>{
+    const fresh=drafts.filter(d=>d.metrics).map(d=>{const m=d.metrics;return{id:uid(),sport:d.sport,date:m.date,rpe:d.rpe,duration:m.durMin,distance:m.distKm,elevGain:m.gain,runType:d.sport==="run"?d.runType:undefined,metrics:m,notes:d.filename};});
+    saveEntries([...fresh,...entries]);setImports(null);
+  };
+  return e("div",null,
+    e("div",{style:{display:"flex",gap:10,marginBottom:16}},
+      e(Btn,{kind:"solid",color:C.run,onClick:()=>fileRef.current.click(),style:{flex:2,padding:14}},"＋ ファイルを追加"),
+      e(Btn,{kind:"ghost",onClick:()=>setOpen(true),style:{flex:1,padding:14}},"手入力"),
+      e("input",{ref:fileRef,type:"file",multiple:true,onChange:handleFiles,style:{display:"none"}})
+    ),
+    e("div",{style:{fontSize:11.5,color:C.faint,marginTop:-8,marginBottom:14}},"GPX / TCX / FIT / CSV に対応。複数選択可。日付・競技は自動判定します。"),
+    open&&e(LogForm,{onSave:addEntry,onCancel:()=>setOpen(false),canCancel:true,settings,saveSettings}),
+    imports&&e(ImportReview,{drafts:imports,entries,onCommit:commitImports,onCancel:()=>setImports(null)}),
+    csvImport&&e(CsvMapModal,{file:csvImport,entries,settings,saveSettings,
+      onCommit:rows=>{saveEntries([...rows,...entries]);setCsvImport(null);},
+      onCancel:()=>setCsvImport(null)}),
+    !entries.length&&!open&&!imports&&e(Panel,{style:{textAlign:"center",padding:28}},
+      e("div",{style:{color:C.muted,fontSize:14,lineHeight:1.7}},"まだ記録がありません。\nGPX/TCX/FIT/CSVを追加するか、\n右上「データ」でデモを読み込めます。")
+    ),
+    e("div",{style:{display:"flex",flexDirection:"column",gap:10,marginTop:4}},
+      entries.map(ev=>e(EntryCard,{key:ev.id,ev,settings,onDelete:()=>del(ev.id),onOpen:()=>setDetail(ev)}))
+    ),
+    detail&&e(ActivityDetail,{ev:detail,settings,onClose:()=>setDetail(null)})
+  );
+}
+
+function ImportReview({drafts,entries,onCommit,onCancel}){
+  const [rows,setRows]=useState(drafts);
+  const ok=rows.filter(r=>r.metrics);
+  const upd=(i,patch)=>setRows(rs=>rs.map((r,j)=>j===i?{...r,...patch}:r));
+  const remove=i=>setRows(rs=>rs.filter((_,j)=>j!==i));
+  const isDup=r=>r.metrics&&entries.some(e=>e.date===r.metrics.date&&Math.abs((e.distance||0)-r.metrics.distKm)<0.2);
+  return e(Panel,{style:{marginBottom:16,borderColor:C.run}},
+    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+      e(Eyebrow,{color:C.run},`取り込みプレビュー（${ok.length}件）`),
+      e("button",{onClick:onCancel,style:{background:"none",border:"none",color:C.muted,fontSize:20,cursor:"pointer"}},"×")
+    ),
+    e("div",{style:{display:"flex",flexDirection:"column",gap:10,margin:"12px 0"}},
+      rows.map((r,i)=>r.metrics?e("div",{key:i,style:{border:`1px solid ${C.line2}`,borderRadius:10,padding:11}},
+        e("div",{style:{display:"flex",justifyContent:"space-between"}},
+          e("span",{style:{fontFamily:"var(--mono)",fontSize:13}},r.metrics.date),
+          e("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+            isDup(r)&&e("span",{style:{fontSize:10,color:C.warn,border:`1px solid ${C.warn}`,borderRadius:4,padding:"1px 5px"}},"重複の可能性"),
+            e("button",{onClick:()=>remove(i),style:{background:"none",border:"none",color:C.faint,fontSize:16,cursor:"pointer"}},"×")
+          )
+        ),
+        e("div",{style:{fontSize:12.5,color:C.muted,margin:"4px 0 9px"}},`${r.metrics.distKm}km · ${fmtPace(r.metrics.paceSec)}/km${r.metrics.avgHr?` · ♥${r.metrics.avgHr}`:""}${r.metrics.avgCadence?` · ${r.metrics.avgCadence}spm`:""} · ↑${r.metrics.gain}m`),
+        e("div",{style:{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}},
+          e(Chip,{active:r.sport==="run",color:C.run,onClick:()=>upd(i,{sport:"run"})},"ランニング"),
+          e(Chip,{active:r.sport==="hike",color:C.hike,onClick:()=>upd(i,{sport:"hike"})},"登山"),
+          r.sport==="run"&&e("select",{value:r.runType,onChange:ev=>upd(i,{runType:ev.target.value}),className:"cin",style:{...IS,width:"auto",padding:"5px 8px",fontSize:12.5}},RUN_TYPES.map(t=>e("option",{key:t},t))),
+          e("span",{style:{marginLeft:"auto",fontSize:11.5,color:C.muted}},`RPE ${r.rpe}`)
+        ),
+        e("input",{type:"range",min:1,max:10,value:r.rpe,onChange:ev=>upd(i,{rpe:Number(ev.target.value)}),style:{width:"100%",accentColor:sportOf(r.sport).color,marginTop:6}})
+      ):null)
+    ),
+    e("div",{style:{display:"flex",gap:10}},
+      e(Btn,{kind:"solid",color:C.run,onClick:()=>onCommit(rows),style:{flex:1,padding:12}},`${ok.length}件を追加`),
+      e(Btn,{kind:"ghost",onClick:onCancel,style:{padding:12}},"キャンセル")
+    )
+  );
+}
+
+function EntryCard({ev,settings,onDelete,onOpen}){
+  const sp=sportOf(ev.sport);const m=ev.metrics;const detail=[];
+  if(ev.sport==="run"){
+    if(ev.distance)detail.push(`${ev.distance}km`);
+    if(m?.paceSec)detail.push(`${fmtPace(m.paceSec)}/km`);else if(ev.distance&&ev.duration)detail.push(`${fmtPace((ev.duration*60)/ev.distance)}/km`);
+    if(m?.avgHr)detail.push(`♥${m.avgHr}`);if(m?.avgCadence)detail.push(`${m.avgCadence}spm`);
+    if(ev.runType)detail.push(ev.runType);
+  }else if(ev.sport==="hike"){
+    if(ev.distance)detail.push(`${ev.distance}km`);if(ev.elevGain)detail.push(`↑${ev.elevGain}m`);
+    if(ev.packKg)detail.push(`${ev.packKg}kg`);if(ev.ctr)detail.push(`CT比${ev.ctr}%`);if(ev.peak)detail.push(ev.peak);
+  }else if(ev.sport==="climb"){
+    const done=(ev.sends||[]).filter(s=>s.result!=="プロジェクト");
+    if(done.length){const best=done.reduce((a,b)=>b.idx>a.idx?b:a);detail.push(`最高 ${best.grade}`);}
+    detail.push(`${done.length}/${(ev.sends||[]).length}完登`);
+  }else{
+    // カスタム種目
+    if(ev.distance)detail.push(`${ev.distance}km`);
+    if(ev.elevGain)detail.push(`↑${ev.elevGain}m`);
+    if(ev.sets)detail.push(`${ev.sets}セット`);
+    if(m?.avgHr||ev.avgHr)detail.push(`♥${m?.avgHr||ev.avgHr}`);
+  }
+  const zones=m?.hrSeries?zonesFromSeries(m.hrSeries,m.hrSeriesSec,settings.maxHr):null;
+  const openable=!!m||ev.sport==="climb";
+  return e(Panel,{style:{padding:13,display:"flex",gap:12,alignItems:"flex-start"}},
+    e("div",{style:{width:4,alignSelf:"stretch",borderRadius:4,background:sp.color}}),
+    e("div",{onClick:openable?onOpen:undefined,style:{flex:1,minWidth:0,cursor:openable?"pointer":"default"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}},
+        e("span",{style:{fontWeight:600,color:sp.color,fontSize:14}},sp.label,m&&e("span",{style:{fontSize:10,color:C.faint,marginLeft:6,fontFamily:"var(--mono)"}},"GPS")),
+        e("span",{style:{fontFamily:"var(--mono)",fontSize:12,color:C.muted}},ev.date)
+      ),
+      e("div",{style:{fontSize:13,marginTop:4,lineHeight:1.5}},detail.join(" · ")||"—"),
+      zones&&e(ZoneBar,{zones}),
+      e("div",{style:{display:"flex",gap:10,marginTop:6,alignItems:"center",flexWrap:"wrap"}},
+        e("span",{style:{fontFamily:"var(--mono)",fontSize:11,color:C.faint}},`RPE ${ev.rpe} · ${ev.duration}分 · 負荷 ${sessionLoad(ev)}`),
+        ev.notes&&e("span",{style:{fontSize:12,color:C.muted}},ev.notes),
+        openable&&e("span",{style:{marginLeft:"auto",fontSize:12,color:sp.color}},"詳細 ›")
+      )
+    ),
+    e("button",{onClick:onDelete,"aria-label":"削除",style:{background:"none",border:"none",color:C.faint,cursor:"pointer",fontSize:18,padding:2}},"×")
+  );
+}
+
+function LogForm({onSave,onCancel,canCancel,settings,saveSettings}){
+  const [sport,setSport]=useState("run");
+  const [f,setF]=useState({date:today(),rpe:5,duration:"",notes:"",distance:"",elevGain:"",avgHr:"",runType:"イージー",packKg:"",ctr:"",peak:"",sets:""});
+  const [sends,setSends]=useState([]);
+  const [creating,setCreating]=useState(false);
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const sp=sportOf(sport);
+  const isCustom=!SPORTS[sport];
+  const tmpl=isCustom?(sp.template||"timed"):null;
+  const submit=()=>{
+    if(!f.duration){alert("時間（分）を入力してください。");return;}
+    const base={sport,date:f.date,rpe:Number(f.rpe),duration:Number(f.duration),notes:f.notes.trim()};
+    let ex={};
+    if(sport==="run")ex={distance:num(f.distance),elevGain:num(f.elevGain),avgHr:num(f.avgHr),runType:f.runType};
+    else if(sport==="hike")ex={distance:num(f.distance),elevGain:num(f.elevGain),packKg:num(f.packKg),ctr:num(f.ctr),peak:f.peak.trim()};
+    else if(sport==="climb")ex={sends};
+    else{ // カスタム種目：テンプレートに応じた項目
+      ex={avgHr:num(f.avgHr)};
+      if(tmpl==="distance"){ex.distance=num(f.distance);ex.elevGain=num(f.elevGain);}
+      if(tmpl==="sets")ex.sets=num(f.sets);
+    }
+    onSave({...base,...ex});
+  };
+  return e(Panel,{style:{marginBottom:16}},
+    e(Eyebrow,{color:C.info},"新しいセッション"),
+    e("div",{style:{display:"flex",gap:8,margin:"12px 0 10px",flexWrap:"wrap"}},
+      allSports().map(s=>e("button",{key:s.key,onClick:()=>setSport(s.key),style:{flex:"1 1 28%",minWidth:90,padding:"10px 4px",borderRadius:10,cursor:"pointer",fontFamily:"var(--sans)",border:`1px solid ${sport===s.key?s.color:C.line2}`,background:sport===s.key?s.color+"22":"transparent",color:sport===s.key?s.color:C.muted,fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},s.label)),
+      e("button",{onClick:()=>setCreating(v=>!v),style:{flex:"1 1 28%",minWidth:90,padding:"10px 4px",borderRadius:10,cursor:"pointer",fontFamily:"var(--sans)",border:`1px dashed ${C.line2}`,background:"transparent",color:C.faint,fontWeight:600,fontSize:13}},creating?"閉じる":"＋種目を追加")
+    ),
+    creating&&e(SportCreator,{settings,saveSettings,onCreated:key=>{setSport(key);setCreating(false);}}),
+    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:6}},
+      e(Field,{label:"日付"},e(TI,{type:"date",value:f.date,onChange:ev=>set("date",ev.target.value)})),
+      e(Field,{label:"時間（分）"},e(TI,{inputMode:"numeric",placeholder:"60",value:f.duration,onChange:ev=>set("duration",ev.target.value)}))
+    ),
+    e(Field,{label:`RPE — ${f.rpe}/10`},e("input",{type:"range",min:1,max:10,value:f.rpe,onChange:ev=>set("rpe",ev.target.value),style:{width:"100%",accentColor:sp.color}})),
+    sport==="run"&&e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+      e(Field,{label:"距離（km）"},e(TI,{inputMode:"decimal",value:f.distance,onChange:ev=>set("distance",ev.target.value)})),
+      e(Field,{label:"獲得標高（m）"},e(TI,{inputMode:"numeric",value:f.elevGain,onChange:ev=>set("elevGain",ev.target.value)})),
+      e(Field,{label:"平均心拍（任意）"},e(TI,{inputMode:"numeric",value:f.avgHr,onChange:ev=>set("avgHr",ev.target.value)})),
+      e(Field,{label:"種別"},e(Sel,{value:f.runType,onChange:ev=>set("runType",ev.target.value)},RUN_TYPES.map(t=>e("option",{key:t},t))))
+    ),
+    sport==="hike"&&e(Fragment,null,
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+        e(Field,{label:"距離（km）"},e(TI,{inputMode:"decimal",value:f.distance,onChange:ev=>set("distance",ev.target.value)})),
+        e(Field,{label:"獲得標高（m）"},e(TI,{inputMode:"numeric",value:f.elevGain,onChange:ev=>set("elevGain",ev.target.value)})),
+        e(Field,{label:"ザック重量（kg）"},e(TI,{inputMode:"decimal",value:f.packKg,onChange:ev=>set("packKg",ev.target.value)})),
+        e(Field,{label:"CT比（%）"},e(TI,{inputMode:"numeric",placeholder:"100=標準",value:f.ctr,onChange:ev=>set("ctr",ev.target.value)}))
+      ),
+      e(Field,{label:"山名・ルート（任意）"},e(TI,{value:f.peak,onChange:ev=>set("peak",ev.target.value),placeholder:"例：剱岳 早月尾根"}))
+    ),
+    sport==="climb"&&e(SendEditor,{sends,setSends}),
+    isCustom&&e(Fragment,null,
+      tmpl==="distance"&&e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+        e(Field,{label:"距離（km）"},e(TI,{inputMode:"decimal",value:f.distance,onChange:ev=>set("distance",ev.target.value)})),
+        e(Field,{label:"獲得標高（m・任意）"},e(TI,{inputMode:"numeric",value:f.elevGain,onChange:ev=>set("elevGain",ev.target.value)}))
+      ),
+      tmpl==="sets"&&e(Field,{label:"セット / 試合数（任意）"},e(TI,{inputMode:"numeric",placeholder:"3",value:f.sets,onChange:ev=>set("sets",ev.target.value)})),
+      e(Field,{label:"平均心拍（任意）"},e(TI,{inputMode:"numeric",value:f.avgHr,onChange:ev=>set("avgHr",ev.target.value)}))
+    ),
+    e(Field,{label:"メモ（任意）"},e(TI,{value:f.notes,onChange:ev=>set("notes",ev.target.value),placeholder:"コンディション・気づき"})),
+    e("div",{style:{display:"flex",gap:10,marginTop:6}},
+      e(Btn,{kind:"solid",color:sp.color,onClick:submit,style:{flex:1,padding:13}},"保存"),
+      canCancel&&e(Btn,{kind:"ghost",onClick:onCancel,style:{padding:13}},"キャンセル")
+    )
+  );
+}
+
+// ── カスタム種目の作成・管理 ──────────────────────────────────────
+function SportCreator({settings,saveSettings,onCreated}){
+  const [name,setName]=useState("");
+  const [color,setColor]=useState(nextCustomColor());
+  const [template,setTemplate]=useState("timed");
+  const customs=settings.customSports||[];
+  const create=()=>{
+    const label=name.trim();
+    if(!label){alert("種目名を入力してください。");return;}
+    if(allSports().some(s=>s.label===label)){alert("同名の種目がすでにあります。");return;}
+    const key="cs_"+uid();
+    const next=[...customs,{key,label,color,template}];
+    saveSettings({...settings,customSports:next}); // setCustomSportsはApp側のuseEffectで反映
+    setName("");
+    onCreated&&onCreated(key);
+  };
+  const remove=key=>{
+    if(!confirm("この種目を選択肢から削除しますか？（過去の記録は残ります）"))return;
+    saveSettings({...settings,customSports:customs.filter(s=>s.key!==key)});
+  };
+  return e("div",{style:{border:`1px dashed ${C.line2}`,borderRadius:10,padding:12,marginBottom:12}},
+    e(Eyebrow,{color:C.info},"新しい種目"),
+    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:10}},
+      e(Field,{label:"種目名"},e(TI,{value:name,onChange:ev=>setName(ev.target.value),placeholder:"例：テニス"})),
+      e(Field,{label:"記録する項目"},e(Sel,{value:template,onChange:ev=>setTemplate(ev.target.value)},
+        e("option",{value:"timed"},"時間のみ（＋心拍）"),
+        e("option",{value:"distance"},"距離あり（距離/標高/心拍）"),
+        e("option",{value:"sets"},"セット数（テニス・野球など）")
+      ))
+    ),
+    e(Field,{label:"カラー"},e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+      CUSTOM_COLORS.map(c=>e("button",{key:c,onClick:()=>setColor(c),style:{width:28,height:28,borderRadius:8,background:c,border:color===c?`2px solid ${C.text}`:"2px solid transparent",cursor:"pointer"}}))
+    )),
+    e(Btn,{kind:"solid",color,onClick:create,style:{width:"100%",padding:11}},"この種目を追加"),
+    customs.length>0&&e("div",{style:{marginTop:12}},
+      e("div",{style:{fontSize:11,color:C.faint,marginBottom:6}},"追加済みの種目（×で選択肢から削除）"),
+      e("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+        customs.map(s=>e("span",{key:s.key,style:{display:"inline-flex",alignItems:"center",gap:6,border:`1px solid ${s.color}`,color:s.color,borderRadius:999,padding:"4px 10px",fontSize:12}},
+          s.label,
+          e("button",{onClick:()=>remove(s.key),style:{background:"none",border:"none",color:s.color,cursor:"pointer",fontSize:13,padding:0,lineHeight:1}},"×")
+        ))
+      )
+    )
+  );
+}
+
+function SendEditor({sends,setSends}){
+  const [discipline,setDiscipline]=useState("boulder");
+  const [system,setSystem]=useState("V");
+  const [grade,setGrade]=useState("V3");
+  const [result,setResult]=useState("完登(RP)");
+  const [tags,setTags]=useState([]);
+  const list=gradeList(discipline,system);
+  const add=()=>{const g=list.find(x=>x.l===grade)||list[0];setSends([...sends,{discipline,grade:g.l,idx:g.i,result,tags:[...tags]}]);setTags([]);};
+  const toggle=t=>setTags(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t]);
+  return e("div",{style:{border:`1px solid ${C.line}`,borderRadius:11,padding:12,marginBottom:12}},
+    e(Eyebrow,{color:C.climb},"この日に触った課題"),
+    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:10}},
+      e(Field,{label:"種目"},e(Sel,{value:discipline,onChange:ev=>{const d=ev.target.value;setDiscipline(d);const l=gradeList(d,system);setGrade(l[Math.min(3,l.length-1)].l);setResult(SEND_RESULTS[d][1]);}},e("option",{value:"boulder"},"ボルダー"),e("option",{value:"route"},"ルート"))),
+      discipline==="boulder"?e(Field,{label:"体系"},e(Sel,{value:system,onChange:ev=>{setSystem(ev.target.value);const l=gradeList("boulder",ev.target.value);setGrade(l[Math.min(3,l.length-1)].l);}},e("option",{value:"V"},"Vスケール"),e("option",{value:"kyudan"},"段・級"))):e("div"),
+      e(Field,{label:"グレード"},e(Sel,{value:grade,onChange:ev=>setGrade(ev.target.value)},list.map(g=>e("option",{key:g.l},g.l)))),
+      e(Field,{label:"結果"},e(Sel,{value:result,onChange:ev=>setResult(ev.target.value)},SEND_RESULTS[discipline].map(r=>e("option",{key:r},r))))
+    ),
+    e("div",{style:{fontSize:12,color:C.muted,marginBottom:6}},"スタイル（弱点分析・複数可）"),
+    e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}},STYLE_TAGS.map(t=>e(Chip,{key:t,active:tags.includes(t),color:C.climb,onClick:()=>toggle(t)},t))),
+    e(Btn,{kind:"line",color:C.climb,onClick:add,style:{width:"100%"}},"＋ この課題を追加"),
+    sends.length>0&&e("div",{style:{marginTop:10,display:"flex",flexDirection:"column",gap:6}},
+      sends.map((s,i)=>e("div",{key:i,style:{display:"flex",alignItems:"center",gap:8,fontSize:13,background:C.raised,borderRadius:8,padding:"7px 10px"}},
+        e("span",{style:{fontFamily:"var(--mono)",fontWeight:600,color:C.climb}},s.grade),
+        e("span",{style:{color:C.muted}},s.result),
+        e("span",{style:{color:C.faint,fontSize:11,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},s.tags.join("・")),
+        e("button",{onClick:()=>setSends(sends.filter((_,j)=>j!==i)),style:{background:"none",border:"none",color:C.faint,cursor:"pointer",fontSize:16}},"×")
+      ))
+    )
+  );
+}
+
+// ── ActivityDetail ────────────────────────────────────────────────
+function ActivityDetail({ev,settings,onClose}){
+  const sp=sportOf(ev.sport);const m=ev.metrics;
+  const zones=m?.hrSeries?zonesFromSeries(m.hrSeries,m.hrSeriesSec,settings.maxHr):null;
+  const zTot=zones?zones.reduce((a,b)=>a+b,0):0;
+  const stats=[];
+  if(m){stats.push(["距離",`${m.distKm}km`],["時間",`${m.durMin}分`],["ペース",`${fmtPace(m.paceSec)}/km`],["平均心拍",m.avgHr?`${m.avgHr}`:"—"],["最大心拍",m.maxHrPeak?`${m.maxHrPeak}`:"—"],["ケイデンス",m.avgCadence?`${m.avgCadence}`:"—"],["ストライド",m.avgStride?`${m.avgStride}m`:"—"],["獲得標高",`${m.gain}m`],["心拍ドリフト",m.decoupling!=null?`${m.decoupling}%`:"—"]);}
+  else if(ev.sport!=="climb"){
+    if(ev.distance)stats.push(["距離",`${ev.distance}km`]);stats.push(["時間",`${ev.duration}分`]);
+    if(ev.elevGain)stats.push(["獲得標高",`${ev.elevGain}m`]);if(ev.ctr)stats.push(["CT比",`${ev.ctr}%`]);if(ev.packKg)stats.push(["ザック",`${ev.packKg}kg`]);
+  }
+  return e("div",{style:{position:"fixed",inset:0,background:C.bg,zIndex:60,overflowY:"auto"}},
+    e("div",{style:{maxWidth:760,margin:"0 auto",padding:"16px 16px 40px"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:C.bg,padding:"4px 0 12px",zIndex:2}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:10}},
+          e("span",{style:{width:4,height:26,borderRadius:3,background:sp.color}}),
+          e("div",null,
+            e("div",{style:{fontWeight:700,fontSize:17,color:sp.color}},sp.label+(ev.peak?` · ${ev.peak}`:"")),
+            e("div",{style:{fontFamily:"var(--mono)",fontSize:12,color:C.muted}},`${ev.date} · RPE ${ev.rpe} · 負荷 ${sessionLoad(ev)}`)
+          )
+        ),
+        e(Btn,{kind:"ghost",onClick:onClose,style:{padding:"8px 12px"}},"閉じる")
+      ),
+      stats.length>0&&e(Panel,{style:{marginBottom:14}},
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px 10px"}},
+          stats.map(([k,v])=>e("div",{key:k},e("div",{style:{fontSize:11,color:C.faint}},k),e("div",{style:{fontFamily:"var(--mono)",fontSize:18,fontWeight:600,marginTop:2}},v)))
+        )
+      ),
+      zones&&zTot>0&&e(Panel,{style:{marginBottom:14}},
+        e(Eyebrow,{color:C.run},"心拍ゾーン（このアクティビティ）"),
+        e("div",{style:{display:"flex",height:14,borderRadius:7,overflow:"hidden",margin:"12px 0 10px",background:C.raised}},
+          zones.map((s,i)=>s>0?e("div",{key:i,style:{width:`${(s/zTot)*100}%`,background:ZONE_DEFS[i].c}}):null)
+        ),
+        e("div",{style:{display:"flex",flexWrap:"wrap",gap:"4px 14px"}},
+          ZONE_DEFS.map((z,i)=>zones[i]>0?e("span",{key:z.l,style:{fontSize:11.5,color:C.muted,display:"flex",alignItems:"center",gap:5}},
+            e("span",{style:{width:8,height:8,borderRadius:2,background:z.c}}),
+            e("span",{style:{fontFamily:"var(--mono)",color:z.c}},z.l),` ${Math.round((zones[i]/zTot)*100)}%`
+          ):null)
+        )
+      ),
+      m?.series&&m.series.length>2&&e(Panel,{style:{marginBottom:14}},
+        e(Eyebrow,null,"ペース / 心拍 / 標高"),
+        e("div",{style:{marginTop:12}},
+          e(LineChartSVG,{data:m.series,height:160,lines:[{key:"pace",color:C.run},{key:"hr",color:C.bad},{key:"ele",color:C.hike,dashed:true}]}),
+          e("div",{style:{display:"flex",gap:14,fontSize:11.5,color:C.muted,marginTop:4}},
+            e("span",{style:{color:C.run}},"— ペース(sec/km)"),e("span",{style:{color:C.bad}},"— 心拍"),e("span",{style:{color:C.hike}},"… 標高")
+          )
+        )
+      ),
+      m?.laps&&m.laps.length>0&&e(LapTable,{laps:m.laps}),
+      ev.sport==="climb"&&e(ClimbSendList,{ev}),
+      ev.notes&&e(Panel,{style:{marginTop:14}},e(Eyebrow,null,"メモ"),e("div",{style:{fontSize:14,marginTop:8}},ev.notes))
+    )
+  );
+}
+function LapTable({laps}){
+  const paces=laps.map(l=>l.paceSec).filter(Boolean);
+  const fast=Math.min(...paces),slow=Math.max(...paces);
+  const wOf=p=>slow===fast?60:25+((slow-p)/(slow-fast))*75;
+  return e(Panel,{style:{marginBottom:14}},
+    e(Eyebrow,null,"ラップ（1kmごと）"),
+    e("div",{style:{marginTop:12,display:"flex",flexDirection:"column",gap:7}},
+      laps.map(l=>e("div",{key:l.km,style:{display:"flex",alignItems:"center",gap:10}},
+        e("span",{style:{width:24,fontFamily:"var(--mono)",fontSize:12,color:C.muted}},l.km),
+        e("div",{style:{flex:1,height:18,background:C.raised,borderRadius:5,position:"relative",overflow:"hidden"}},
+          e("div",{style:{width:`${wOf(l.paceSec)}%`,height:"100%",background:C.run+"55",borderRight:`2px solid ${C.run}`}}),
+          e("span",{style:{position:"absolute",left:8,top:0,lineHeight:"18px",fontFamily:"var(--mono)",fontSize:12}},fmtPace(l.paceSec))
+        ),
+        e("span",{style:{width:50,textAlign:"right",fontFamily:"var(--mono)",fontSize:12,color:C.bad}},l.avgHr?`♥${l.avgHr}`:""),
+        e("span",{style:{width:44,textAlign:"right",fontFamily:"var(--mono)",fontSize:11,color:C.faint}},l.gain!=null?`↑${l.gain}`:"")
+      ))
+    )
+  );
+}
+function ClimbSendList({ev}){
+  const sends=ev.sends||[];
+  return e(Panel,{style:{marginBottom:14}},
+    e(Eyebrow,{color:C.climb},`この日の課題（${sends.length}本）`),
+    e("div",{style:{marginTop:12,display:"flex",flexDirection:"column",gap:7}},
+      sends.map((s,i)=>e("div",{key:i,style:{display:"flex",alignItems:"center",gap:8,fontSize:13,background:C.raised,borderRadius:8,padding:"8px 11px"}},
+        e("span",{style:{fontFamily:"var(--mono)",fontWeight:700,color:C.climb,width:44}},s.grade),
+        e("span",{style:{color:s.result==="プロジェクト"?C.warn:C.good,width:78,fontSize:12}},s.result),
+        e("span",{style:{color:C.faint,fontSize:11.5,flex:1}},s.tags.join("・"))
+      ))
+    )
+  );
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+function DashTab({entries,goals,settings}){
+  const load=useMemo(()=>computeLoad(entries),[entries]);
+  const weekly=useMemo(()=>weeklySeries(entries),[entries]);
+  const suggestions=useMemo(()=>buildSuggestions(entries,goals||[],settings),[entries,goals,settings]);
+  const st=acwrStatus(load.acwr);
+  const bySport=useMemo(()=>{const o={};entries.filter(e=>daysBetween(e.date,today())<28).forEach(e=>{o[e.sport]=(o[e.sport]||0)+sessionLoad(e);});return o;},[entries]);
+  const balanceSports=useMemo(()=>allSports().filter(s=>bySport[s.key]>0).concat(
+    Object.keys(bySport).filter(k=>!allSports().some(s=>s.key===k)&&bySport[k]>0).map(sportOf)),[bySport,settings]);
+  const tot=Object.values(bySport).reduce((a,b)=>a+b,0)||1;
+  if(!entries.length)return e(EmptyHint);
+  const runWeekKm=useMemo(()=>{
+    const runs=entries.filter(e=>e.sport==="run");const map={};
+    runs.forEach(e=>{if(e.distance){const w=weekStart(e.date);map[w]=(map[w]||0)+e.distance;}});
+    let d=parseD(weekStart(today()));const out=[];
+    for(let i=0;i<10;i++){const k=d.toISOString().slice(0,10);out.unshift({week:k.slice(5),km:Math.round((map[k]||0)*10)/10});d.setDate(d.getDate()-7);}
+    return out;
+  },[entries]);
+  const hikeMonthElev=useMemo(()=>{
+    const map={};entries.filter(e=>e.sport==="hike").forEach(e=>{if(e.elevGain){const m=monthKey(e.date);map[m]=(map[m]||0)+e.elevGain;}});
+    return Object.keys(map).sort().slice(-8).map(m=>({month:m.slice(2),elev:map[m]}));
+  },[entries]);
+
+  return e("div",{style:{display:"flex",flexDirection:"column",gap:14}},
+    suggestions.length>0&&e(Panel,null,
+      e(Eyebrow,{color:C.text},"次にやること / WHAT'S NEXT"),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:12,marginTop:12}},
+        suggestions.map((s,i)=>e("div",{key:i,style:{display:"flex",gap:11}},
+          e("span",{style:{width:7,height:7,borderRadius:4,background:s.color,marginTop:6,flexShrink:0}}),
+          e("div",{style:{flex:1}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+              e("span",{style:{fontSize:14,fontWeight:700}},s.title),
+              e("span",{style:{fontSize:10,fontFamily:"var(--mono)",color:s.color,border:`1px solid ${s.color}`,borderRadius:4,padding:"1px 5px"}},s.tag)
+            ),
+            e("div",{style:{fontSize:12.5,color:C.muted,marginTop:3,lineHeight:1.5}},s.detail)
+          )
+        ))
+      )
+    ),
+    e(Panel,null,
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},e(Eyebrow,null,"トレーニング負荷 / ACWR"),e("span",{style:{fontSize:12,fontWeight:700,color:st.color}},st.label)),
+      e(GaugeSVG,{ratio:load.acwr,status:st}),
+      e("div",{style:{display:"flex",justifyContent:"space-around",marginTop:4}},
+        e(Stat,{label:"急性(7日)",value:load.acute,sub:"AU"}),
+        e(Stat,{label:"慢性(週平均)",value:load.chronic,sub:"AU"}),
+        e(Stat,{label:"比率",value:load.acwr?load.acwr.toFixed(2):"—",color:st.color,sub:"0.8–1.3が目安"})
+      ),
+      e("div",{style:{fontSize:11,color:C.faint,marginTop:10,lineHeight:1.5}},"負荷 = RPE × 時間（sRPE法）。ACWRは急性÷慢性で急増を検知する目安。")
+    ),
+    e(Panel,null,
+      e(Eyebrow,null,"週間負荷（直近10週）"),
+      e("div",{style:{marginTop:12}},e(BarChartSVG,{data:weekly,dataKey:"load",labelKey:"week",color:C.info,height:150}))
+    ),
+    e(Panel,null,
+      e(Eyebrow,null,"競技バランス（直近28日）"),
+      e("div",{style:{display:"flex",height:14,borderRadius:7,overflow:"hidden",margin:"14px 0 10px",background:C.raised}},
+        balanceSports.map(s=>{const w=((bySport[s.key]||0)/tot)*100;return w>0?e("div",{key:s.key,style:{width:`${w}%`,background:s.color}}):null;})
+      ),
+      e("div",{style:{display:"flex",gap:16,flexWrap:"wrap"}},
+        balanceSports.map(s=>e("div",{key:s.key,style:{display:"flex",alignItems:"center",gap:6,fontSize:12.5}},
+          e("span",{style:{width:9,height:9,borderRadius:3,background:s.color}}),
+          e("span",{style:{color:C.muted}},s.label),
+          e("span",{style:{fontFamily:"var(--mono)"}},`${Math.round(((bySport[s.key]||0)/tot)*100)}%`)
+        ))
+      )
+    ),
+    entries.filter(e=>e.sport==="run").length>0&&e(Panel,null,
+      e(Eyebrow,{color:C.run},"ランニング — 週間距離"),
+      e("div",{style:{marginTop:12}},e(BarChartSVG,{data:runWeekKm,dataKey:"km",labelKey:"week",color:C.run,height:140}))
+    ),
+    hikeMonthElev.length>0&&e(Panel,null,
+      e(Eyebrow,{color:C.hike},"登山 — 月別 累積標高"),
+      e("div",{style:{marginTop:12}},e(BarChartSVG,{data:hikeMonthElev,dataKey:"elev",labelKey:"month",color:C.hike,height:140}))
+    ),
+    e(ClimbProgress,{entries})
+  );
+}
+
+function ClimbProgress({entries}){
+  const [disc,setDisc]=useState("boulder");
+  const maxByDate=useMemo(()=>{
+    const map={};entries.filter(e=>e.sport==="climb").forEach(e=>(e.sends||[]).forEach(s=>{if(s.discipline===disc&&s.result!=="プロジェクト")map[e.date]=Math.max(map[e.date]??-1,s.idx);}));
+    return Object.keys(map).sort().map(d=>({date:d.slice(5),idx:map[d]}));
+  },[entries,disc]);
+  if(!entries.some(e=>e.sport==="climb"&&(e.sends||[]).length))return null;
+  return e(Panel,null,
+    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+      e(Eyebrow,{color:C.climb},"クライミング — 最高グレード推移"),
+      e("div",{style:{display:"flex",gap:6}},e(Chip,{active:disc==="boulder",color:C.climb,onClick:()=>setDisc("boulder")},"ボルダー"),e(Chip,{active:disc==="route",color:C.climb,onClick:()=>setDisc("route")},"ルート"))
+    ),
+    maxByDate.length>1?e("div",{style:{marginTop:12}},e(LineChartSVG,{data:maxByDate,height:140,lines:[{key:"idx",color:C.climb}]}))
+    :e("div",{style:{color:C.faint,fontSize:13,padding:16,textAlign:"center"}},"完登記録がありません。")
+  );
+}
+
+// ── Analysis ─────────────────────────────────────────────────────
+function AnalysisTab({entries,settings}){
+  if(!entries.length)return e(EmptyHint);
+  return e("div",{style:{display:"flex",flexDirection:"column",gap:14}},
+    e(ClimbElo,{entries}),e(ClimbWeakness,{entries}),e(ClimbPyramid,{entries}),
+    e(HrZones,{entries,settings}),e(RunDynamics,{entries}),e(RunDistribution,{entries}),e(HikeAnalysis,{entries})
+  );
+}
+function ClimbElo({entries}){
+  const [disc,setDisc]=useState("boulder");
+  const {series,rating,n}=useMemo(()=>eloSeries(entries,disc),[entries,disc]);
+  if(!entries.some(e=>e.sport==="climb"&&(e.sends||[]).length))return null;
+  const equiv=idxToLabel(disc,(rating-1000)/100);
+  return e(Panel,null,
+    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+      e(Eyebrow,{color:C.climb},"クライミング ELO"),
+      e("div",{style:{display:"flex",gap:6}},e(Chip,{active:disc==="boulder",color:C.climb,onClick:()=>setDisc("boulder")},"ボルダー"),e(Chip,{active:disc==="route",color:C.climb,onClick:()=>setDisc("route")},"ルート"))
+    ),
+    n>0?e(Fragment,null,
+      e("div",{style:{display:"flex",alignItems:"baseline",gap:12,margin:"12px 0 6px"}},
+        e("span",{style:{fontFamily:"var(--mono)",fontSize:34,fontWeight:700,color:C.climb}},rating),
+        e("div",null,e("div",{style:{fontSize:13}},`相当グレード `,e("b",null,equiv)),e("div",{style:{fontSize:11,color:C.faint}},`${n} トライから推定`))
+      ),
+      series.length>1&&e("div",{style:{marginTop:6}},e(LineChartSVG,{data:series,height:130,lines:[{key:"elo",color:C.climb}]})),
+      e("div",{style:{fontSize:11,color:C.faint,marginTop:8,lineHeight:1.5}},"完登=勝ち・敗退=負けでEloレートを更新。最高グレードより安定した実力指標。")
+    ):e("div",{style:{color:C.faint,fontSize:13,padding:12,textAlign:"center"}},"この種目の記録がありません。")
+  );
+}
+function ClimbWeakness({entries}){
+  const data=useMemo(()=>{
+    const acc={};
+    entries.filter(e=>e.sport==="climb").forEach(e=>(e.sends||[]).forEach(s=>{const done=s.result!=="プロジェクト";s.tags.forEach(t=>{acc[t]=acc[t]||{tag:t,total:0,done:0};acc[t].total++;if(done)acc[t].done++;});}));
+    return Object.values(acc).map(x=>({...x,rate:Math.round((x.done/x.total)*100)})).sort((a,b)=>a.rate-b.rate);
+  },[entries]);
+  if(!data.length)return e(Panel,null,e(Eyebrow,{color:C.climb},"スタイル別 弱点"),e("div",{style:{color:C.faint,fontSize:13,marginTop:10}},"課題にスタイルタグを付けると得意・苦手が見えます。"));
+  return e(Panel,null,
+    e(Eyebrow,{color:C.climb},"スタイル別 完登率"),
+    e("div",{style:{fontSize:13,color:C.muted,margin:"8px 0 12px"}},"いま最も苦手: ",e("span",{style:{color:C.bad,fontWeight:700}},data[0].tag),`（${data[0].rate}%）`),
+    e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+      data.map(d=>{
+        const col=d.rate<40?C.bad:d.rate<70?C.warn:C.good;
+        return e("div",{key:d.tag,style:{display:"flex",alignItems:"center",gap:10}},
+          e("span",{style:{width:92,fontSize:12.5}},d.tag),
+          e("div",{style:{flex:1,height:10,background:C.raised,borderRadius:6,overflow:"hidden"}},e("div",{style:{width:`${d.rate}%`,height:"100%",background:col,borderRadius:6}})),
+          e("span",{style:{width:58,textAlign:"right",fontFamily:"var(--mono)",fontSize:12,color:col}},`${d.rate}%`,e("span",{style:{color:C.faint}},` ·${d.total}`))
+        );
+      })
+    )
+  );
+}
+function ClimbPyramid({entries}){
+  const [disc,setDisc]=useState("boulder");
+  const sends=useMemo(()=>{const o=[];entries.filter(e=>e.sport==="climb").forEach(e=>(e.sends||[]).forEach(s=>{if(s.discipline===disc&&s.result!=="プロジェクト")o.push(s);}));return o;},[entries,disc]);
+  const data=useMemo(()=>{const m={};sends.forEach(s=>{m[s.idx]=m[s.idx]||{idx:s.idx,grade:s.grade,count:0};m[s.idx].count++;});return Object.values(m).sort((a,b)=>b.idx-a.idx);},[entries,disc]);
+  const flash=sends.filter(s=>s.result==="フラッシュ"||s.result==="オンサイト").length;
+  if(!entries.some(e=>e.sport==="climb"&&(e.sends||[]).length))return null;
+  return e(Panel,null,
+    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+      e(Eyebrow,{color:C.climb},"グレードピラミッド"),
+      e("div",{style:{display:"flex",gap:6}},e(Chip,{active:disc==="boulder",color:C.climb,onClick:()=>setDisc("boulder")},"ボルダー"),e(Chip,{active:disc==="route",color:C.climb,onClick:()=>setDisc("route")},"ルート"))
+    ),
+    data.length>0?e(Fragment,null,
+      e("div",{style:{marginTop:12}},e(HBarChartSVG,{data,dataKey:"count",labelKey:"grade",color:C.climb,height:data.length*28})),
+      e("div",{style:{display:"flex",gap:24,marginTop:8}},e(Stat,{label:"総完登",value:sends.length,sub:"本"}),e(Stat,{label:"一撃率",value:`${sends.length?Math.round((flash/sends.length)*100):0}%`,sub:"フラッシュ/OS",color:C.climb}))
+    ):e("div",{style:{color:C.faint,fontSize:13,padding:16,textAlign:"center"}},"完登記録がありません。")
+  );
+}
+function HrZones({entries,settings}){
+  const data=useMemo(()=>{
+    const secs=[0,0,0,0,0];
+    entries.filter(e=>e.sport==="run"&&e.metrics?.hrSeries&&daysBetween(e.date,today())<120).forEach(e=>{zonesFromSeries(e.metrics.hrSeries,e.metrics.hrSeriesSec,settings.maxHr).forEach((s,i)=>secs[i]+=s);});
+    const tot=secs.reduce((a,b)=>a+b,0);
+    return{rows:ZONE_DEFS.map((z,i)=>({...z,secs:secs[i],pct:tot?Math.round((secs[i]/tot)*100):0})),tot};
+  },[entries,settings]);
+  if(!data.tot)return null;
+  const lowPct=data.rows[0].pct+data.rows[1].pct;
+  return e(Panel,null,
+    e(Eyebrow,{color:C.run},`心拍ゾーン分布（直近120日・最大${settings.maxHr}bpm）`),
+    e("div",{style:{fontSize:13,color:C.muted,margin:"8px 0 12px"}},"低強度(Z1-2) ",e("span",{style:{fontFamily:"var(--mono)",color:lowPct>=75?C.good:C.warn,fontWeight:700}},`${lowPct}%`),"。",lowPct>=75?"土台づくりに良い配分です。":"中強度に偏りがち。イージーを増やすと故障予防に。"),
+    e("div",{style:{display:"flex",height:16,borderRadius:8,overflow:"hidden",marginBottom:12,background:C.raised}},
+      data.rows.map(z=>z.pct>0?e("div",{key:z.l,style:{width:`${z.pct}%`,background:z.c}}):null)
+    ),
+    e("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+      data.rows.map(z=>e("div",{key:z.l,style:{display:"flex",alignItems:"center",gap:10,fontSize:12.5}},
+        e("span",{style:{width:10,height:10,borderRadius:3,background:z.c}}),
+        e("span",{style:{width:24,fontFamily:"var(--mono)",color:z.c}},z.l),
+        e("span",{style:{color:C.muted,width:64}},z.name),
+        e("div",{style:{flex:1,height:8,background:C.raised,borderRadius:5,overflow:"hidden"}},e("div",{style:{width:`${z.pct}%`,height:"100%",background:z.c}})),
+        e("span",{style:{width:60,textAlign:"right",fontFamily:"var(--mono)"}},`${z.pct}% `,e("span",{style:{color:C.faint}},`${Math.round(z.secs/60)}分`))
+      ))
+    )
+  );
+}
+function RunDynamics({entries}){
+  const runs=useMemo(()=>entries.filter(e=>e.sport==="run"&&e.metrics).sort((a,b)=>a.date<b.date?-1:1),[entries]);
+  if(!runs.length)return e(Panel,null,e(Eyebrow,{color:C.run},"ランニング・ダイナミクス"),e("div",{style:{color:C.faint,fontSize:13,marginTop:10,lineHeight:1.6}},"GPX/TCXを取り込むと、ペース・心拍・ケイデンス・ストライド・心拍ドリフトを分析します。"));
+  const cad=runs.filter(r=>r.metrics.avgCadence).map((r,i)=>({i,v:r.metrics.avgCadence,date:r.date.slice(5)}));
+  const stride=runs.filter(r=>r.metrics.avgStride).map((r,i)=>({i,v:r.metrics.avgStride,date:r.date.slice(5)}));
+  const eff=runs.filter(r=>r.metrics.paceSec&&r.metrics.avgHr).map((r,i)=>({i,v:Math.round((1000/r.metrics.paceSec)/r.metrics.avgHr*1000),date:r.date.slice(5)}));
+  const lastDec=runs.filter(r=>r.metrics.decoupling!=null).slice(-1)[0]?.metrics.decoupling??null;
+  return e(Panel,null,
+    e(Eyebrow,{color:C.run},"ランニング・ダイナミクス"),
+    lastDec!=null&&e("div",{style:{fontSize:13,color:C.muted,margin:"8px 0 4px"}},"直近の心拍ドリフト ",e("span",{style:{fontFamily:"var(--mono)",color:lastDec<=5?C.good:C.warn,fontWeight:700}},`${lastDec}%`),"。",lastDec<=5?"後半も心拍が安定。":"後半に心拍が上振れ。"),
+    cad.length>1&&e(Fragment,null,e("div",{style:{fontSize:11.5,color:C.faint,marginTop:10,marginBottom:2}},"平均ケイデンス (spm)"),e(LineChartSVG,{data:cad,height:90,lines:[{key:"v",color:C.run}]})),
+    stride.length>1&&e(Fragment,null,e("div",{style:{fontSize:11.5,color:C.faint,marginTop:10,marginBottom:2}},"平均ストライド (m/歩)"),e(LineChartSVG,{data:stride,height:90,lines:[{key:"v",color:C.hike}]})),
+    eff.length>1&&e(Fragment,null,e("div",{style:{fontSize:11.5,color:C.faint,marginTop:10,marginBottom:2}},"エアロビック効率 (高いほど良い)"),e(LineChartSVG,{data:eff,height:90,lines:[{key:"v",color:C.info}]}))
+  );
+}
+function RunDistribution({entries}){
+  const data=useMemo(()=>{const acc={};let easy=0,hard=0;entries.filter(e=>e.sport==="run"&&e.runType).forEach(e=>{acc[e.runType]=(acc[e.runType]||0)+1;if(HARD_RUN.has(e.runType))hard++;else if(e.runType!=="その他")easy++;});return{rows:Object.keys(acc).map(k=>({type:k,n:acc[k]})),easy,hard};},[entries]);
+  if(!data.rows.length)return null;
+  const easyPct=data.easy+data.hard?Math.round((data.easy/(data.easy+data.hard))*100):0;
+  return e(Panel,null,
+    e(Eyebrow,{color:C.run},"ランニング — 強度分布"),
+    e("div",{style:{fontSize:13,color:C.muted,margin:"8px 0 12px"}},"イージー比率 ",e("span",{style:{fontFamily:"var(--mono)",color:easyPct>=75?C.good:C.warn,fontWeight:700}},`${easyPct}%`)),
+    e(BarChartSVG,{data:data.rows,dataKey:"n",labelKey:"type",color:C.run,height:120})
+  );
+}
+function HikeAnalysis({entries}){
+  const hikes=entries.filter(e=>e.sport==="hike");
+  const ctr=hikes.filter(e=>e.ctr).sort((a,b)=>a.date<b.date?-1:1).map(e=>({date:e.date.slice(5),ctr:e.ctr}));
+  const avg=ctr.length?Math.round(ctr.reduce((s,x)=>s+x.ctr,0)/ctr.length):null;
+  if(!hikes.length)return null;
+  return e(Panel,null,
+    e(Eyebrow,{color:C.hike},"登山 — コースタイム比"),
+    avg!=null?e(Fragment,null,
+      e("div",{style:{fontSize:13,color:C.muted,margin:"8px 0 12px"}},"平均 ",e("span",{style:{fontFamily:"var(--mono)",color:avg<=100?C.good:C.warn,fontWeight:700}},`${avg}%`),"（100%=標準）"),
+      ctr.length>1&&e(LineChartSVG,{data:ctr,height:130,lines:[{key:"ctr",color:C.hike}]})
+    ):e("div",{style:{color:C.faint,fontSize:13,marginTop:10}},"CT比を記録すると傾向が見えます。")
+  );
+}
+
+// ── Goals ────────────────────────────────────────────────────────
+function GoalsTab({entries,goals,saveGoals}){
+  const [open,setOpen]=useState(false);
+  const add=g=>{saveGoals([...goals,{...g,id:uid()}]);setOpen(false);};
+  const del=id=>saveGoals(goals.filter(g=>g.id!==id));
+  const bump=(id,v)=>saveGoals(goals.map(g=>g.id===id?{...g,manual:Math.max(0,Math.min(100,(g.manual||0)+v))}:g));
+  return e("div",null,
+    open?e(GoalForm,{onSave:add,onCancel:()=>setOpen(false)}):e(Btn,{kind:"solid",color:C.info,onClick:()=>setOpen(true),style:{width:"100%",padding:13,marginBottom:14}},"＋ 目標を追加"),
+    !goals.length&&!open&&e(Panel,{style:{textAlign:"center",padding:26}},e("div",{style:{color:C.muted,fontSize:14}},"目標を立てると、記録から進捗を自動集計します。")),
+    e("div",{style:{display:"flex",flexDirection:"column",gap:12}},goals.map(g=>e(GoalCard,{key:g.id,g,entries,onDelete:()=>del(g.id),onBump:bump})))
+  );
+}
+function GoalCard({g,entries,onDelete,onBump}){
+  const m=GOAL_METRICS.find(x=>x.k===g.metric);
+  const cur=goalCurrent(g,entries);
+  const isGrade=g.metric==="climb_max_boulder";
+  const curDisp=isGrade?(cur<0?"—":V_GRADES[cur]):cur;
+  const tgtDisp=isGrade?V_GRADES[g.target]:g.target;
+  const pct=g.metric==="manual"?(g.manual||0):Math.min(100,Math.round((cur/(g.target||1))*100));
+  const col=g.sportColor||C.info;
+  const daysLeft=g.deadline?daysBetween(today(),g.deadline):null;
+  return e(Panel,{style:{padding:14}},
+    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
+      e("div",null,e("div",{style:{fontWeight:600,fontSize:15}},g.title||m?.label),e("div",{style:{fontSize:12,color:C.muted,marginTop:2}},m?.label,daysLeft!=null&&` · 残り${daysLeft}日`)),
+      e("button",{onClick:onDelete,style:{background:"none",border:"none",color:C.faint,cursor:"pointer",fontSize:18}},"×")
+    ),
+    e("div",{style:{display:"flex",alignItems:"baseline",gap:6,margin:"10px 0 8px"}},
+      e("span",{style:{fontFamily:"var(--mono)",fontSize:24,fontWeight:700,color:col}},curDisp),
+      e("span",{style:{color:C.faint}},`/ ${tgtDisp} ${m?.unit}`),
+      e("span",{style:{marginLeft:"auto",fontFamily:"var(--mono)",color:pct>=100?C.good:C.muted}},`${pct}%`)
+    ),
+    e("div",{style:{height:9,background:C.raised,borderRadius:6,overflow:"hidden"}},e("div",{style:{width:`${Math.min(100,pct)}%`,height:"100%",background:pct>=100?C.good:col,borderRadius:6}})),
+    g.metric==="manual"&&e("div",{style:{display:"flex",gap:8,marginTop:10}},e(Btn,{kind:"ghost",onClick:()=>onBump(g.id,-10),style:{flex:1,padding:8}},"−10%"),e(Btn,{kind:"ghost",onClick:()=>onBump(g.id,10),style:{flex:1,padding:8}},"＋10%"))
+  );
+}
+function GoalForm({onSave,onCancel}){
+  const [metric,setMetric]=useState("run_week_km");
+  const [title,setTitle]=useState("");const [target,setTarget]=useState("");
+  const [gradeTarget,setGradeTarget]=useState("V5");const [deadline,setDeadline]=useState("");
+  const m=GOAL_METRICS.find(x=>x.k===metric);const isGrade=metric==="climb_max_boulder";
+  const submit=()=>{
+    const g={metric,title:title.trim(),target:isGrade?V_GRADES.indexOf(gradeTarget):Number(target)||0,deadline:deadline||null,manual:metric==="manual"?0:undefined,sportColor:m.sport?SPORTS[m.sport].color:C.info};
+    if(!isGrade&&metric!=="manual"&&!target){alert("目標値を入力してください。");return;}
+    onSave(g);
+  };
+  return e(Panel,{style:{marginBottom:14}},
+    e(Eyebrow,{color:C.info},"新しい目標"),
+    e("div",{style:{marginTop:12}},
+      e(Field,{label:"種類"},e(Sel,{value:metric,onChange:ev=>setMetric(ev.target.value)},GOAL_METRICS.map(x=>e("option",{key:x.k,value:x.k},x.label)))),
+      e(Field,{label:"タイトル（任意）"},e(TI,{value:title,onChange:ev=>setTitle(ev.target.value),placeholder:metric==="manual"?"例：剱岳 早月尾根 日帰り":m.label})),
+      isGrade?e(Field,{label:"目標グレード"},e(Sel,{value:gradeTarget,onChange:ev=>setGradeTarget(ev.target.value)},V_GRADES.map(v=>e("option",{key:v},v))))
+        :metric==="manual"?e("div",{style:{fontSize:12,color:C.faint,marginBottom:12}},"進捗は0%から開始し、ボタンで手動更新します。")
+        :e(Field,{label:`目標値（${m.unit||"値"}）`},e(TI,{inputMode:"decimal",value:target,onChange:ev=>setTarget(ev.target.value)})),
+      e(Field,{label:"期限（任意）"},e(TI,{type:"date",value:deadline,onChange:ev=>setDeadline(ev.target.value)}))
+    ),
+    e("div",{style:{display:"flex",gap:10}},e(Btn,{kind:"solid",color:C.info,onClick:submit,style:{flex:1,padding:12}},"追加"),e(Btn,{kind:"ghost",onClick:onCancel,style:{padding:12}},"キャンセル"))
+  );
+}
+
+// ── Apple Health 書き出し（export.xml）取り込み ──────────────────
+// 数百MBになるためDOMParserは使わず、Blob.sliceでチャンク走査して
+// 睡眠 / 安静時心拍 / HRV(SDNN) の行だけを正規表現で抽出する。
+function parseHkDate(str){ // "2026-03-09 02:34:00 +0900"
+  const m=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2})$/.exec(str||"");
+  if(!m)return null;
+  // localMs=書き出し元タイムゾーンの壁時計基準ms。夜の判定・時間差計算に一貫して使う
+  const localMs=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]);
+  return{localMs,localDate:`${m[1]}-${m[2]}-${m[3]}`};
+}
+const hkAttr=(line,name)=>{
+  const key=name+'="';const i=line.indexOf(key);
+  if(i<0)return null;
+  const j=line.indexOf('"',i+key.length);
+  return j<0?null:line.slice(i+key.length,j);
+};
+function mergeIntervals(segs){ // [{s,e}] → 重複統合後の合計分
+  const a=[...segs].sort((x,y)=>x.s-y.s);let total=0,cs=null,ce=null;
+  for(const g of a){
+    if(cs==null){cs=g.s;ce=g.e;continue;}
+    if(g.s<=ce)ce=Math.max(ce,g.e);
+    else{total+=ce-cs;cs=g.s;ce=g.e;}
+  }
+  if(cs!=null)total+=ce-cs;
+  return Math.round(total/60000);
+}
+async function parseHealthExport(file,onProgress){
+  const CH=8*1024*1024;
+  const dec=new TextDecoder("utf-8");
+  let tail="";
+  const sleepSegs=[]; // {src,s,e,night,stage}
+  const rhr={};       // date → bpm
+  const hrvSum={},hrvN={}; // date → SDNN平均用
+  const scanLine=line=>{
+    if(line.indexOf("<Record ")<0)return;
+    if(line.indexOf("SleepAnalysis")>=0){
+      const val=hkAttr(line,"value")||"";
+      if(val.indexOf("Asleep")<0)return; // InBed/Awakeは睡眠時間に含めない
+      const st=parseHkDate(hkAttr(line,"startDate")),en=parseHkDate(hkAttr(line,"endDate"));
+      if(!st||!en)return;
+      const dur=en.localMs-st.localMs;
+      if(dur<=0||dur>20*3600000)return;
+      const stage=val.indexOf("Deep")>=0?"deep":val.indexOf("REM")>=0?"rem":val.indexOf("Core")>=0?"core":"uns";
+      sleepSegs.push({src:hkAttr(line,"sourceName")||"?",s:st.localMs,e:en.localMs,night:en.localDate,stage});
+    }else if(line.indexOf("RestingHeartRate")>=0){
+      const st=parseHkDate(hkAttr(line,"startDate"));
+      const v=parseFloat(hkAttr(line,"value"));
+      if(st&&v>20&&v<150)rhr[st.localDate]=Math.round(v);
+    }else if(line.indexOf("HeartRateVariabilitySDNN")>=0){
+      const st=parseHkDate(hkAttr(line,"startDate"));
+      const v=parseFloat(hkAttr(line,"value"));
+      if(st&&v>0&&v<400){hrvSum[st.localDate]=(hrvSum[st.localDate]||0)+v;hrvN[st.localDate]=(hrvN[st.localDate]||0)+1;}
+    }
+  };
+  for(let off=0;off<file.size;off+=CH){
+    const buf=await file.slice(off,off+CH).arrayBuffer();
+    const text=tail+dec.decode(buf,{stream:off+CH<file.size});
+    const lines=text.split("\n");
+    tail=lines.pop();
+    for(const line of lines)scanLine(line);
+    if(onProgress)onProgress(Math.min(1,(off+CH)/file.size));
+    await new Promise(r=>setTimeout(r,0)); // UIをブロックしない
+  }
+  if(tail)scanLine(tail);
+
+  // 夜×ソースで集計 → 合計睡眠が最長のソースを採用（複数アプリの二重計上を防ぐ）
+  const byNight=new Map();
+  for(const g of sleepSegs){
+    if(!byNight.has(g.night))byNight.set(g.night,new Map());
+    const bySrc=byNight.get(g.night);
+    if(!bySrc.has(g.src))bySrc.set(g.src,[]);
+    bySrc.get(g.src).push(g);
+  }
+  const days=new Map();
+  const put=(date,patch)=>{days.set(date,{...(days.get(date)||{date}),...patch});};
+  for(const[night,bySrc]of byNight){
+    let best=null;
+    for(const[src,segs]of bySrc){
+      const total=mergeIntervals(segs);
+      if(!best||total>best.total)best={src,segs,total};
+    }
+    if(!best||best.total<30)continue;
+    const stageMin=st=>Math.round(best.segs.filter(g=>g.stage===st).reduce((a,g)=>a+(g.e-g.s),0)/60000);
+    const rec={sleepMin:Math.min(best.total,16*60),sleepSource:best.src};
+    const d=stageMin("deep"),r=stageMin("rem"),c=stageMin("core");
+    if(d)rec.deepMin=d;if(r)rec.remMin=r;if(c)rec.coreMin=c;
+    put(night,rec);
+  }
+  for(const d in rhr)put(d,{rhr:rhr[d]});
+  for(const d in hrvSum)put(d,{hrv:Math.round(hrvSum[d]/hrvN[d]),hrvSource:"import"});
+  const list=[...days.values()].sort((a,b)=>a.date<b.date?-1:1);
+  return{days:list,stats:{
+    sleepNights:list.filter(x=>x.sleepMin>0).length,
+    rhrDays:list.filter(x=>x.rhr>0).length,
+    hrvDays:list.filter(x=>x.hrv>0).length,
+  }};
+}
+
+// ── 体調オーバーレイチャート（負荷×HRV×安静時心拍×睡眠）──────────
+function OverlaySVG({wellness,entries,days=42}){
+  const W=Math.min(720,Math.max(300,(typeof window!=="undefined"?window.innerWidth:360)-64));
+  const H=180,PL=6,PR=6,PT=12,PB=22;
+  const cw=W-PL-PR,ch=H-PT-PB;
+  const dates=[];{const d=parseD(today());d.setDate(d.getDate()-(days-1));for(let i=0;i<days;i++){dates.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}}
+  const wByDate=new Map(wellness.map(w=>[w.date,w]));
+  const loadByDate={};entries.forEach(x=>{loadByDate[x.date]=(loadByDate[x.date]||0)+sessionLoad(x);});
+  const x=i=>PL+(i+0.5)*(cw/days);
+  const bw=Math.max(2,cw/days-2);
+  const maxLoad=Math.max(1,...dates.map(d=>loadByDate[d]||0));
+  const series=[
+    {k:"hrv",  label:"HRV",     unit:"ms", color:C.good, get:w=>w&&w.hrv>0?w.hrv:null},
+    {k:"rhr",  label:"安静時HR",unit:"bpm",color:C.bad,  get:w=>w&&w.rhr>0?w.rhr:null},
+    {k:"sleep",label:"睡眠",    unit:"h",  color:C.info, get:w=>w&&w.sleepMin>0?Math.round(w.sleepMin/6)/10:null},
+  ].map(sr=>{
+    const vals=dates.map(d=>sr.get(wByDate.get(d)));
+    const nums=vals.filter(v=>v!=null);
+    if(nums.length<2)return{...sr,vals,ok:false};
+    const lo=Math.min(...nums),hi=Math.max(...nums);
+    const span=(hi-lo)||1;
+    const y=v=>PT+ch-((v-lo)/span)*(ch*0.86)-ch*0.07; // 各系列を自前スケールで正規化
+    return{...sr,vals,ok:true,y,latest:nums[nums.length-1]};
+  });
+  let svg=[];
+  dates.forEach((d,i)=>{ // 負荷バー
+    const v=loadByDate[d]||0;if(!v)return;
+    const h=(v/maxLoad)*ch*0.9;
+    svg.push(e("rect",{key:"b"+i,x:x(i)-bw/2,y:PT+ch-h,width:bw,height:h,fill:C.line2,rx:1}));
+  });
+  series.forEach(sr=>{
+    if(!sr.ok)return;
+    let seg=[];const flush=()=>{if(seg.length>1)svg.push(e("polyline",{key:sr.k+seg[0],points:seg.join(" "),fill:"none",stroke:sr.color,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}));seg=[];};
+    sr.vals.forEach((v,i)=>{
+      if(v==null){flush();return;}
+      seg.push(`${x(i)},${sr.y(v)}`);
+      svg.push(e("circle",{key:sr.k+"c"+i,cx:x(i),cy:sr.y(v),r:2.1,fill:sr.color}));
+    });
+    flush();
+  });
+  for(let i=days-1;i>=0;i-=7)svg.push(e("text",{key:"t"+i,x:x(i),y:H-6,fontSize:8.5,fill:C.faint,textAnchor:"middle",fontFamily:"var(--mono)"},dates[i].slice(5)));
+  const legend=[{label:"負荷",color:C.line2,latest:null,unit:""},...series.filter(s=>s.ok).map(s=>({label:s.label,color:s.color,latest:s.latest,unit:s.unit}))];
+  return e("div",null,
+    e("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,style:{display:"block"}},svg),
+    e("div",{style:{display:"flex",gap:12,flexWrap:"wrap",marginTop:8}},
+      legend.map(l=>e("div",{key:l.label,style:{display:"flex",alignItems:"center",gap:5,fontSize:11.5,color:C.muted}},
+        e("span",{style:{width:9,height:l.label==="負荷"?9:3,borderRadius:2,background:l.color}}),
+        l.label,l.latest!=null&&e("span",{style:{fontFamily:"var(--mono)",color:l.color}},`${l.latest}${l.unit}`)
+      ))
+    ),
+    e("div",{style:{fontSize:10.5,color:C.faint,marginTop:6,lineHeight:1.5}},"各ラインは期間内の自系列で正規化（形の比較用）。バーは日次トレーニング負荷。")
+  );
+}
+
+// ── WellnessTab（体調）───────────────────────────────────────────
+function WellnessTab({wellness,entries,saveWellness,deleteWellness,mergeWellness}){
+  const [date,setDate]=useState(today());
+  const rec=wellness.find(w=>w.date===date)||{};
+  const [hrv,setHrv]=useState("");
+  const [showMore,setShowMore]=useState(false);
+  const [sleepH,setSleepH]=useState("");const [sleepM,setSleepM]=useState("");const [rhrIn,setRhrIn]=useState("");
+  const [saved,setSaved]=useState(false);
+  const [importing,setImporting]=useState(null); // {pct} | {done:stats} | {error}
+  const fileRef=useRef(null);
+  useEffect(()=>{ // 日付を切り替えたら既存値をプリフィル
+    setHrv(rec.hrv?String(rec.hrv):"");
+    setSleepH(rec.sleepMin?String(Math.floor(rec.sleepMin/60)):"");
+    setSleepM(rec.sleepMin?String(rec.sleepMin%60):"");
+    setRhrIn(rec.rhr?String(rec.rhr):"");
+    setSaved(false);
+  },[date,wellness]);
+  const bump=d=>setHrv(v=>{const n=Math.max(0,(parseInt(v,10)||0)+d);return n?String(n):"";});
+  const save=()=>{
+    const w={...rec,date};
+    const hv=parseInt(hrv,10);
+    if(hv>0){w.hrv=hv;w.hrvSource="manual";}
+    else{delete w.hrv;delete w.hrvSource;}
+    if(showMore){
+      const sm=(parseInt(sleepH,10)||0)*60+(parseInt(sleepM,10)||0);
+      if(sm>0){w.sleepMin=sm;w.sleepSource="manual";}
+      const rv=parseInt(rhrIn,10);
+      if(rv>0)w.rhr=rv;
+    }
+    if(!(w.hrv>0)&&!(w.sleepMin>0)&&!(w.rhr>0)){alert("値を入力してください。");return;}
+    saveWellness(w);
+    setSaved(true);setTimeout(()=>setSaved(false),1600);
+  };
+  const doImport=async ev=>{
+    const f=ev.target.files[0];ev.target.value="";if(!f)return;
+    setImporting({pct:0});
+    try{
+      const res=await parseHealthExport(f,pct=>setImporting({pct}));
+      if(!res.days.length){setImporting({error:"睡眠・安静時心拍・HRVのレコードが見つかりませんでした。export.xml を選んでいるか確認してください。"});return;}
+      const{added,updated}=mergeWellness(res.days);
+      setImporting({done:{...res.stats,added,updated}});
+    }catch(err){setImporting({error:"取り込み失敗: "+((err&&err.message)||err)});}
+  };
+  const insights=useMemo(()=>computeWellnessInsights(wellness,entries),[wellness,entries]);
+  const recent=[...wellness].sort((a,b)=>a.date<b.date?1:-1).slice(0,14);
+  const fmtSleep=min=>min>0?`${Math.floor(min/60)}:${String(min%60).padStart(2,"0")}`:"—";
+  return e("div",{style:{display:"flex",flexDirection:"column",gap:14}},
+    // ── HRVワンタップ入力
+    e(Panel,null,
+      e(Eyebrow,{color:C.good},"HRV入力（Zeppアプリの値を転記）"),
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}},
+        e(Field,{label:"日付"},e(TI,{type:"date",value:date,onChange:ev=>setDate(ev.target.value)})),
+        e(Field,{label:"HRV（ms）"},
+          e("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+            e(Btn,{kind:"ghost",onClick:()=>bump(-1),style:{padding:"10px 14px",fontSize:16}},"−"),
+            e(TI,{inputMode:"numeric",placeholder:"62",value:hrv,onChange:ev=>setHrv(ev.target.value.replace(/[^0-9]/g,"")),style:{textAlign:"center",fontFamily:"var(--mono)",fontSize:18}}),
+            e(Btn,{kind:"ghost",onClick:()=>bump(1),style:{padding:"10px 14px",fontSize:16}},"＋")
+          ))
+      ),
+      e("button",{onClick:()=>setShowMore(v=>!v),style:{background:"none",border:"none",color:C.info,fontSize:12.5,cursor:"pointer",padding:0,fontFamily:"var(--sans)",marginBottom:showMore?10:14}},showMore?"▲ 睡眠・安静時心拍を閉じる":"▼ 睡眠・安静時心拍も手入力する"),
+      showMore&&e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}},
+        e(Field,{label:"睡眠（時間）"},e(TI,{inputMode:"numeric",placeholder:"7",value:sleepH,onChange:ev=>setSleepH(ev.target.value)})),
+        e(Field,{label:"（分）"},e(TI,{inputMode:"numeric",placeholder:"30",value:sleepM,onChange:ev=>setSleepM(ev.target.value)})),
+        e(Field,{label:"安静時HR"},e(TI,{inputMode:"numeric",placeholder:"58",value:rhrIn,onChange:ev=>setRhrIn(ev.target.value)}))
+      ),
+      e(Btn,{kind:"solid",color:saved?C.good:C.info,onClick:save,style:{width:"100%",padding:13}},saved?"✓ 保存しました":"保存"),
+      rec.hrv>0&&e("div",{style:{fontSize:11.5,color:C.faint,marginTop:8}},`この日の記録: HRV ${rec.hrv}ms${rec.hrvSource==="import"?"（取り込み）":""} / 睡眠 ${fmtSleep(rec.sleepMin)} / 安静時HR ${rec.rhr||"—"}`)
+    ),
+    // ── Apple Health取り込み
+    e(Panel,null,
+      e(Eyebrow,{color:C.info},"Apple Health 取り込み"),
+      e("div",{style:{fontSize:12.5,color:C.muted,margin:"10px 0 12px",lineHeight:1.65}},"「ヘルスケア」アプリ → プロフィール → すべてのヘルスケアデータを書き出す → zipを解凍して export.xml を選択。睡眠・安静時心拍・HRVを自動で取り込みます（数百MBでも動作）。"),
+      importing&&importing.pct!=null&&e("div",{style:{marginBottom:12}},
+        e("div",{style:{height:6,background:C.raised,borderRadius:3,overflow:"hidden"}},
+          e("div",{style:{width:`${Math.round(importing.pct*100)}%`,height:"100%",background:C.info,transition:"width .2s"}})),
+        e("div",{style:{fontSize:11.5,color:C.muted,marginTop:5,fontFamily:"var(--mono)"}},`走査中… ${Math.round(importing.pct*100)}%`)
+      ),
+      importing&&importing.done&&e("div",{style:{fontSize:12.5,color:C.good,marginBottom:12,lineHeight:1.6}},`✓ 取り込み完了 — 睡眠${importing.done.sleepNights}晩 / 安静時HR ${importing.done.rhrDays}日 / HRV ${importing.done.hrvDays}日（新規${importing.done.added}日・更新${importing.done.updated}日）`),
+      importing&&importing.error&&e("div",{style:{fontSize:12.5,color:C.bad,marginBottom:12,lineHeight:1.6}},importing.error),
+      e(Btn,{kind:"solid",color:C.info,onClick:()=>fileRef.current.click(),style:{width:"100%",padding:13},},importing&&importing.pct!=null?"処理中…":"export.xml を選択"),
+      e("input",{ref:fileRef,type:"file",accept:".xml,text/xml",onChange:doImport,style:{display:"none"}})
+    ),
+    // ── 相関チャート
+    e(Panel,null,
+      e(Eyebrow,null,"負荷 × HRV × 安静時HR × 睡眠（直近6週）"),
+      e("div",{style:{marginTop:12}},
+        wellness.length?e(OverlaySVG,{wellness,entries}):e("div",{style:{color:C.muted,fontSize:13,padding:"20px 0",textAlign:"center",lineHeight:1.7}},"体調データがまだありません。\nHRVを入力するか、Apple Healthを取り込んでください。"))
+    ),
+    // ── 自動ハイライト
+    insights.length>0&&e(Panel,null,
+      e(Eyebrow,{color:C.warn},"相関ハイライト"),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:12,marginTop:12}},
+        insights.map((s,i)=>e("div",{key:i,style:{display:"flex",gap:11}},
+          e("span",{style:{width:7,height:7,borderRadius:4,background:s.color,marginTop:6,flexShrink:0}}),
+          e("div",{style:{flex:1}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}},
+              e("span",{style:{fontSize:14,fontWeight:700}},s.title),
+              e("span",{style:{fontSize:10,fontFamily:"var(--mono)",color:s.color,border:`1px solid ${s.color}`,borderRadius:4,padding:"1px 5px"}},s.tag)),
+            e("div",{style:{fontSize:12.5,color:C.muted,marginTop:3,lineHeight:1.5}},s.detail))
+        ))
+      )
+    ),
+    // ── 直近の記録
+    recent.length>0&&e(Panel,null,
+      e(Eyebrow,null,"直近の体調記録"),
+      e("div",{style:{marginTop:10}},
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 24px",gap:4,fontSize:10.5,color:C.faint,padding:"0 2px 6px",fontFamily:"var(--mono)"}},
+          e("span",null,"日付"),e("span",null,"睡眠"),e("span",null,"HRV"),e("span",null,"安静HR"),e("span",null,"")),
+        recent.map(w=>e("div",{key:w.date,style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 24px",gap:4,fontSize:12.5,padding:"7px 2px",borderTop:`1px solid ${C.line}`,alignItems:"center"}},
+          e("span",{onClick:()=>setDate(w.date),style:{fontFamily:"var(--mono)",color:C.info,cursor:"pointer"}},w.date.slice(5)),
+          e("span",{style:{fontFamily:"var(--mono)"}},fmtSleep(w.sleepMin)),
+          e("span",{style:{fontFamily:"var(--mono)",color:w.hrv>0?C.good:C.faint}},w.hrv>0?`${w.hrv}ms`:"—"),
+          e("span",{style:{fontFamily:"var(--mono)",color:w.rhr>0?C.text:C.faint}},w.rhr||"—"),
+          e("button",{onClick:()=>{if(confirm(`${w.date}の体調記録を削除しますか？`))deleteWellness(w.date);},style:{background:"none",border:"none",color:C.faint,cursor:"pointer",fontSize:14,padding:0}},"×")
+        ))
+      )
+    )
+  );
+}
+
+// ── 汎用CSV：列マッピング取り込み ─────────────────────────────────
+function CsvMapModal({file,entries,settings,saveSettings,onCommit,onCancel}){
+  const parsed=useMemo(()=>Papa.parse(file.text,{header:true,skipEmptyLines:true}),[file]);
+  const headers=parsed.meta&&parsed.meta.fields?parsed.meta.fields.filter(Boolean):[];
+  const sig=headers.join("|");
+  const savedMap=(settings.csvMaps||{})[sig]||null;
+  const guess=names=>headers.find(h=>names.some(n=>h.toLowerCase().includes(n)))||"";
+  const [map,setMap]=useState(savedMap||{
+    date:guess(["date","日付","day"]),
+    duration:guess(["moving time","elapsed","duration","time","時間"]),
+    distance:guess(["distance","距離"]),
+    elevGain:guess(["elev","標高","ascent","climb"]),
+    avgHr:guess(["heart","心拍","hr"]),
+  });
+  const [durUnit,setDurUnit]=useState(savedMap&&savedMap.__durUnit||"sec");
+  const [sport,setSport]=useState(savedMap&&savedMap.__sport||"run");
+  const [rpe,setRpe]=useState(5);
+  const setCol=(k,v)=>setMap(m=>({...m,[k]:v}));
+  const parseDate=v=>{
+    if(!v)return null;
+    const d=new Date(String(v).replace(/\//g,"-").replace(" ","T"));
+    if(!isNaN(d))return d.toISOString().slice(0,10);
+    const d2=new Date(v);
+    return isNaN(d2)?null:d2.toISOString().slice(0,10);
+  };
+  const parseDur=v=>{
+    if(v==null||v==="")return null;
+    const str=String(v).trim();
+    if(str.includes(":")){ // h:mm:ss / m:ss
+      const p=str.split(":").map(Number);if(p.some(isNaN))return null;
+      const sec=p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1];
+      return Math.round(sec/60);
+    }
+    const n=Number(str);if(isNaN(n))return null;
+    return Math.round(durUnit==="sec"?n/60:n);
+  };
+  const toRow=r=>{
+    const date=parseDate(r[map.date]);
+    const duration=parseDur(r[map.duration]);
+    if(!date||!(duration>0))return null;
+    let dist=map.distance?Number(r[map.distance]):NaN;
+    if(!isNaN(dist)&&dist>250)dist=dist/1000; // m表記とみなす
+    const elev=map.elevGain?Math.round(Number(r[map.elevGain])):NaN;
+    const hr=map.avgHr?Math.round(Number(r[map.avgHr])):NaN;
+    const out={id:uid(),sport,date,rpe,duration,notes:file.name+"（CSV）"};
+    if(!isNaN(dist)&&dist>0)out.distance=Math.round(dist*100)/100;
+    if(!isNaN(elev)&&elev>0)out.elevGain=elev;
+    if(!isNaN(hr)&&hr>0)out.avgHr=hr;
+    if(sport==="run")out.runType="イージー";
+    return out;
+  };
+  const rows=useMemo(()=>parsed.data.map(toRow).filter(Boolean),[parsed,map,durUnit,sport,rpe]);
+  const commit=()=>{
+    if(!rows.length){alert("有効な行がありません。日付と時間の列を確認してください。");return;}
+    // このヘッダ構成のマッピングを保存して次回自動適用
+    saveSettings({...settings,csvMaps:{...(settings.csvMaps||{}),[sig]:{...map,__durUnit:durUnit,__sport:sport}}});
+    onCommit(rows);
+  };
+  const colSel=(label,k,required)=>e(Field,{label:label+(required?"":"（任意）")},
+    e(Sel,{value:map[k]||"",onChange:ev=>setCol(k,ev.target.value)},
+      e("option",{value:""},"— なし —"),
+      headers.map(h=>e("option",{key:h,value:h},h))));
+  return e("div",{onClick:onCancel,style:{position:"fixed",inset:0,background:"#000000aa",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:55}},
+    e("div",{onClick:ev=>ev.stopPropagation(),style:{background:C.panel,borderTop:`1px solid ${C.line}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:760,padding:20,maxHeight:"88vh",overflowY:"auto",paddingBottom:"max(20px,env(safe-area-inset-bottom))"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+        e("div",{style:{fontSize:16,fontWeight:700}},"CSV列マッピング"),
+        e("button",{onClick:onCancel,style:{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer"}},"×")),
+      e("div",{style:{fontSize:11.5,color:C.faint,marginBottom:14,fontFamily:"var(--mono)"}},`${file.name} — ${parsed.data.length}行`),
+      savedMap&&e("div",{style:{fontSize:11.5,color:C.good,marginBottom:10}},"✓ 前回のマッピングを適用しました"),
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+        colSel("日付の列","date",true),
+        colSel("時間の列","duration",true),
+        colSel("距離の列","distance"),
+        colSel("獲得標高の列","elevGain"),
+        colSel("平均心拍の列","avgHr"),
+        e(Field,{label:"時間の単位"},e(Sel,{value:durUnit,onChange:ev=>setDurUnit(ev.target.value)},
+          e("option",{value:"sec"},"秒（h:mm:ssは自動判定）"),
+          e("option",{value:"min"},"分")))
+      ),
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+        e(Field,{label:"競技"},e(Sel,{value:sport,onChange:ev=>setSport(ev.target.value)},
+          allSports().map(s=>e("option",{key:s.key,value:s.key},s.label)))),
+        e(Field,{label:`一括RPE — ${rpe}/10`},e("input",{type:"range",min:1,max:10,value:rpe,onChange:ev=>setRpe(Number(ev.target.value)),style:{width:"100%",accentColor:sportOf(sport).color,marginTop:12}}))
+      ),
+      e("div",{style:{border:`1px solid ${C.line}`,borderRadius:10,padding:10,margin:"4px 0 14px"}},
+        e("div",{style:{fontSize:11,color:C.faint,marginBottom:6}},`プレビュー（有効 ${rows.length}行）`),
+        rows.slice(0,3).map((r,i)=>e("div",{key:i,style:{fontSize:12,fontFamily:"var(--mono)",color:C.muted,padding:"3px 0"}},
+          `${r.date} · ${r.duration}分${r.distance?` · ${r.distance}km`:""}${r.elevGain?` · ↑${r.elevGain}m`:""}${r.avgHr?` · ♥${r.avgHr}`:""}`)),
+        !rows.length&&e("div",{style:{fontSize:12,color:C.bad}},"有効な行がありません")
+      ),
+      e("div",{style:{display:"flex",gap:10}},
+        e(Btn,{kind:"solid",color:sportOf(sport).color,onClick:commit,style:{flex:1,padding:12}},`${rows.length}件を追加`),
+        e(Btn,{kind:"ghost",onClick:onCancel,style:{padding:12}},"キャンセル"))
+    )
+  );
+}
+
+// ── DataModal ────────────────────────────────────────────────────
+function DataModal({fb,user,entries,goals,settings,wellness,replaceWellness,onClose,saveEntries,saveGoals,saveSettings}){
+  const fileJson=useRef(null),fileCsv=useRef(null),fileTrack=useRef(null);
+  const [draft,setDraft]=useState(null);const [age,setAge]=useState("");
+  const exportJson=()=>{
+    const blob=new Blob([JSON.stringify({entries,goals,settings,wellness},null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`cairn-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
+  };
+  const importJson=ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.entries)saveEntries(d.entries);if(d.goals)saveGoals(d.goals);if(d.settings)saveSettings(d.settings);if(d.wellness)replaceWellness(d.wellness);alert("読み込みました。");onClose();}catch{alert("JSONを解析できませんでした。");}};r.readAsText(f);};
+  const importCsv=ev=>{const f=ev.target.files[0];if(!f)return;Papa.parse(f,{header:true,skipEmptyLines:true,complete:res=>{const mapped=res.data.map(rowToEntry).filter(Boolean);if(!mapped.length){alert("対応行が見つかりません。");return;}saveEntries([...mapped,...entries]);alert(`${mapped.length}件を取り込みました。`);onClose();}});};
+  const importTrack=async ev=>{
+    const f=ev.target.files[0];ev.target.value="";if(!f)return;
+    const r=await readActivityFile(f);
+    if(r.kind!=="track"){alert("読み込めませんでした: "+(r.reason||"CSVは「記録」タブから取り込んでください"));return;}
+    const m=summarizeTrack(r.pts);
+    setDraft({filename:f.name,metrics:m,sportHint:r.sportHint});
+  };
+  const saveDraft=(rpe,runType,sport)=>{const m=draft.metrics;saveEntries([{id:uid(),sport,date:m.date||today(),rpe,duration:m.durMin,distance:m.distKm,elevGain:m.gain,runType:sport==="run"?runType:undefined,metrics:m,notes:draft.filename},...entries]);setDraft(null);onClose();};
+  const loadDemo=()=>{saveEntries([...demoEntries(),...entries]);onClose();};
+  const clearAll=()=>{if(confirm("すべての記録・目標・体調データを削除します。よろしいですか？")){saveEntries([]);saveGoals([]);replaceWellness([]);onClose();}};
+  const applyAge=()=>{const a=Number(age);if(a>0)saveSettings({...settings,maxHr:Math.round(208-0.7*a)});};
+  return e("div",{onClick:onClose,style:{position:"fixed",inset:0,background:"#000000aa",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:50}},
+    e("div",{onClick:ev=>ev.stopPropagation(),style:{background:C.panel,borderTop:`1px solid ${C.line}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:760,padding:20,maxHeight:"86vh",overflowY:"auto",paddingBottom:"max(20px,env(safe-area-inset-bottom))"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+        e("div",{style:{fontSize:17,fontWeight:700}},"データと設定"),
+        e("button",{onClick:onClose,style:{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer"}},"×")
+      ),
+      draft?e(TrackConfirm,{draft,onSave:saveDraft,onCancel:()=>setDraft(null)}):e(Fragment,null,
+        e(Eyebrow,{color:C.run},"アクティビティ取り込み"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:10,margin:"10px 0 6px"}},
+          e(Btn,{kind:"solid",color:C.run,onClick:()=>fileTrack.current.click(),style:{textAlign:"left"}},"GPX / TCX / FIT を取り込む"),
+          e("input",{ref:fileTrack,type:"file",accept:".gpx,.tcx,.xml,.fit,.FIT",onChange:importTrack,style:{display:"none"}}),
+          e(Btn,{kind:"ghost",onClick:()=>fileCsv.current.click(),style:{textAlign:"left"}},"CSV を取り込む（Strava書き出し）"),
+          e("input",{ref:fileCsv,type:"file",accept:".csv",onChange:importCsv,style:{display:"none"}})
+        ),
+        e("div",{style:{height:1,background:C.line,margin:"14px 0"}}),
+        e(Eyebrow,{color:C.info},"心拍ゾーン設定"),
+        e("div",{style:{display:"flex",gap:10,alignItems:"flex-end",margin:"10px 0 4px"}},
+          e("div",{style:{flex:1}},e(Field,{label:"最大心拍数 (bpm)"},e(TI,{inputMode:"numeric",value:settings.maxHr,onChange:ev=>saveSettings({...settings,maxHr:Number(ev.target.value)||190})}))),
+          e("div",{style:{flex:1}},e(Field,{label:"年齢から推定"},e("div",{style:{display:"flex",gap:6}},e(TI,{inputMode:"numeric",value:age,onChange:ev=>setAge(ev.target.value),placeholder:"25"}),e(Btn,{kind:"line",color:C.info,onClick:applyAge,style:{whiteSpace:"nowrap"}},"計算"))))
+        ),
+        e("div",{style:{fontSize:11.5,color:C.faint,marginBottom:14}},"208 − 0.7 × 年齢（Tanaka式）"),
+        e("div",{style:{height:1,background:C.line,margin:"4px 0 14px"}}),
+        e(Eyebrow,null,"バックアップ・その他"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:10,marginTop:10}},
+          e(Btn,{kind:"ghost",onClick:exportJson,style:{textAlign:"left"}},"バックアップを書き出す（JSON）"),
+          e(Btn,{kind:"ghost",onClick:()=>fileJson.current.click(),style:{textAlign:"left"}},"バックアップを読み込む（JSON）"),
+          e("input",{ref:fileJson,type:"file",accept:".json",onChange:importJson,style:{display:"none"}}),
+          e(Btn,{kind:"ghost",onClick:loadDemo,style:{textAlign:"left"}},"デモデータを読み込んで試す"),
+          e(Btn,{kind:"line",color:C.bad,onClick:clearAll,style:{textAlign:"left"}},"すべて削除")
+        ),
+        e("div",{style:{height:1,background:C.line,margin:"14px 0"}}),
+        e(Eyebrow,{color:C.hike},"アカウント"),
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:10}},
+          e("div",{style:{fontSize:13,color:C.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},(user&&user.email)||"ログイン中"),
+          e(Btn,{kind:"line",color:C.warn,onClick:()=>fb.signOut(),style:{whiteSpace:"nowrap"}},"ログアウト")
+        ),
+        e("div",{style:{fontSize:11,color:C.faint,marginTop:16,lineHeight:1.5}},"データはクラウド（Firestore）に同期されます。オフライン時も端末キャッシュで動作し、再接続時に自動で同期されます。JSONバックアップは引き続き利用できます。")
+      )
+    )
+  );
+}
+function TrackConfirm({draft,onSave,onCancel}){
+  const m=draft.metrics;
+  const [rpe,setRpe]=useState(5);const [runType,setRunType]=useState("イージー");const [sport,setSport]=useState(draft.sportHint||m.sportGuess||"run");
+  const rows=[["日付",m.date||"—"],["距離",`${m.distKm}km`],["時間",`${m.durMin}分`],["ペース",`${fmtPace(m.paceSec)}/km`],["平均心拍",m.avgHr?`${m.avgHr}bpm`:"—"],["最大心拍",m.maxHrPeak?`${m.maxHrPeak}bpm`:"—"],["ケイデンス",m.avgCadence?`${m.avgCadence}spm`:"—"],["ストライド",m.avgStride?`${m.avgStride}m`:"—"],["獲得標高",`${m.gain}m`],["心拍ドリフト",m.decoupling!=null?`${m.decoupling}%`:"—"]];
+  return e("div",null,
+    e(Eyebrow,{color:C.run},`取り込みプレビュー — ${draft.filename}`),
+    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 16px",margin:"12px 0 14px"}},
+      rows.map(([k,v])=>e("div",{key:k,style:{display:"flex",justifyContent:"space-between",borderBottom:`1px solid ${C.line}`,paddingBottom:5}},e("span",{style:{fontSize:12.5,color:C.muted}},k),e("span",{style:{fontFamily:"var(--mono)",fontSize:13}},v)))
+    ),
+    e(Field,{label:"競技"},e(Sel,{value:sport,onChange:ev=>setSport(ev.target.value)},e("option",{value:"run"},"ランニング"),e("option",{value:"hike"},"登山"))),
+    e(Field,{label:`RPE — ${rpe}/10`},e("input",{type:"range",min:1,max:10,value:rpe,onChange:ev=>setRpe(Number(ev.target.value)),style:{width:"100%",accentColor:C.run}})),
+    sport==="run"&&e(Field,{label:"種別"},e(Sel,{value:runType,onChange:ev=>setRunType(ev.target.value)},RUN_TYPES.map(t=>e("option",{key:t},t)))),
+    e("div",{style:{display:"flex",gap:10,marginTop:4}},
+      e(Btn,{kind:"solid",color:C.run,onClick:()=>onSave(rpe,runType,sport),style:{flex:1,padding:12}},"記録に追加"),
+      e(Btn,{kind:"ghost",onClick:onCancel,style:{padding:12}},"戻る")
+    )
+  );
+}
+
+function rowToEntry(r){
+  const keys=Object.keys(r);
+  const find=(...names)=>{const k=keys.find(kk=>names.some(n=>kk.toLowerCase().trim()===n));return k?r[k]:undefined;};
+  const type=(find("activity type")||"").toLowerCase();
+  let sport=null;if(type.includes("run"))sport="run";else if(type.includes("hike")||type.includes("walk"))sport="hike";
+  if(!sport)return null;
+  const rawDate=find("activity date","date");if(!rawDate)return null;
+  const date=new Date(rawDate).toISOString().slice(0,10);
+  let dist=parseFloat(find("distance"))||0;if(dist>1000)dist/=1000;
+  const secs=parseFloat(find("moving time","elapsed time"))||0;
+  return{id:uid(),sport,date,rpe:5,duration:Math.round(secs/60)||30,distance:Math.round(dist*100)/100,elevGain:Math.round(parseFloat(find("elevation gain"))||0),runType:sport==="run"?"イージー":undefined,notes:"CSV取り込み"};
+}
+function demoEntries(){
+  const out=[];const d=n=>{const x=new Date();x.setDate(x.getDate()-n);return x.toISOString().slice(0,10);};
+  const buildRun=(km,mn,hrBase)=>{
+    const avgPace=(mn*60)/km,N=80;
+    const series=Array.from({length:N},(_,i)=>{const frac=i/(N-1),wob=Math.sin(i/6);return{km:Math.round(frac*km*100)/100,pace:Math.round(avgPace*(1+0.06*wob)),hr:Math.round(hrBase+12*Math.sin(i/9)+frac*8),ele:Math.round(60+45*Math.sin(frac*Math.PI*2)+frac*18)};});
+    const laps=Array.from({length:Math.max(1,Math.floor(km))},(_,i)=>({km:i+1,paceSec:Math.round(avgPace*(1+0.05*Math.sin(i*1.3))),avgHr:Math.round(hrBase+i*1.2+4*Math.sin(i)),gain:Math.round(18+10*Math.sin(i*0.7))}));
+    return{series,laps,hrSeries:series.map(p=>p.hr)};
+  };
+  [[2,8,50,7,"イージー",138,168],[5,12,72,6,"ロング",142,172],[9,5,28,8,"インターバル",165,180],[12,8,48,7,"イージー",136,170],[16,14,84,6,"ロング",145,173],[20,6,32,8,"テンポ",158,178],[25,8,50,7,"イージー",137,170]].forEach(([ago,km,mn,rpe,t,hr,cad])=>{
+    const r=buildRun(km,mn,hr);
+    out.push({id:uid(),sport:"run",date:d(ago),rpe,duration:mn,distance:km,elevGain:km*12,runType:t,notes:"",metrics:{distKm:km,durMin:mn,gain:km*12,avgHr:hr,maxHrPeak:hr+22,avgCadence:cad,avgStride:0.96,paceSec:(mn*60)/km,decoupling:t==="ロング"?6.5:3.2,hrSeries:r.hrSeries,hrSeriesSec:mn*60,series:r.series,laps:r.laps}});
+  });
+  out.push({id:uid(),sport:"hike",date:d(7),rpe:7,duration:300,distance:14,elevGain:1200,packKg:9,ctr:92,peak:"燕岳",notes:""});
+  out.push({id:uid(),sport:"hike",date:d(22),rpe:8,duration:420,distance:18,elevGain:1700,packKg:11,ctr:98,peak:"唐松岳",notes:""});
+  const mk=(g,i,r,tags)=>({discipline:"boulder",grade:g,idx:i,result:r,tags});
+  out.push({id:uid(),sport:"climb",date:d(3),rpe:7,duration:90,notes:"",sends:[mk("V4",5,"完登(RP)",["カチ","垂壁"]),mk("V3",4,"フラッシュ",["スラブ","バランス"]),mk("V5",6,"プロジェクト",["強傾斜","保持力"])]});
+  out.push({id:uid(),sport:"climb",date:d(10),rpe:8,duration:100,notes:"",sends:[mk("V4",5,"フラッシュ",["スローパー"]),mk("V5",6,"完登(RP)",["カチ"]),mk("V4",5,"プロジェクト",["ルーフ","保持力"]),mk("V2",3,"完登(RP)",["バランス"])]});
+  out.push({id:uid(),sport:"climb",date:d(18),rpe:7,duration:95,notes:"",sends:[mk("V3",4,"フラッシュ",["スラブ"]),mk("V5",6,"完登(RP)",["ピンチ","強傾斜"]),mk("V6",7,"プロジェクト",["ルーフ"])]});
+  return out;
+}
+function EmptyHint(){return e(Panel,{style:{textAlign:"center",padding:30}},e("div",{style:{color:C.muted,fontSize:14,lineHeight:1.7}},"まだデータがありません。\n「記録」で追加するか、右上「データ」から\nデモ読み込みができます。"));}
+
+// ── Auth ──────────────────────────────────────────────────────────
+function authErrMsg(ex){
+  const c=(ex&&ex.code)||"";
+  if(c.includes("invalid-credential")||c.includes("wrong-password")||c.includes("user-not-found"))return"メールアドレスまたはパスワードが正しくありません。";
+  if(c.includes("email-already-in-use"))return"このメールアドレスは登録済みです。ログインしてください。";
+  if(c.includes("weak-password"))return"パスワードは6文字以上にしてください。";
+  if(c.includes("invalid-email"))return"メールアドレスの形式が正しくありません。";
+  if(c.includes("too-many-requests"))return"試行回数が多すぎます。しばらく待ってからお試しください。";
+  if(c.includes("popup")||c.includes("cancelled"))return"ポップアップを開けませんでした。メール/パスワードでお試しください。";
+  if(c.includes("network"))return"ネットワークエラー。接続を確認してください。";
+  return"エラー: "+((ex&&ex.message)||ex);
+}
+
+function CairnMark(){
+  return e("svg",{width:44,height:50,viewBox:"0 0 30 34",fill:"none"},
+    e("ellipse",{cx:15,cy:25.5,rx:9.5,ry:3.4,fill:C.line2}),
+    e("rect",{x:6,y:18.5,width:18,height:5.4,rx:2.6,fill:C.hike}),
+    e("rect",{x:8.5,y:12.5,width:13,height:5,rx:2.4,fill:C.run}),
+    e("rect",{x:10.5,y:7,width:9,height:4.6,rx:2.2,fill:C.climb}),
+    e("circle",{cx:15,cy:3.4,r:2.4,fill:C.text})
+  );
+}
+
+function AuthScreen({fb}){
+  const [mode,setMode]=useState("signin");
+  const [email,setEmail]=useState("");
+  const [pw,setPw]=useState("");
+  const [err,setErr]=useState("");
+  const [info,setInfo]=useState("");
+  const [busy,setBusy]=useState(false);
+  const run=async fn=>{setErr("");setInfo("");setBusy(true);try{await fn();}catch(ex){setErr(authErrMsg(ex));}setBusy(false);};
+  const submit=()=>{
+    if(!email.trim()||!pw){setErr("メールアドレスとパスワードを入力してください。");return;}
+    run(()=>mode==="signin"?fb.signInEmail(email.trim(),pw):fb.signUpEmail(email.trim(),pw));
+  };
+  const reset=()=>{
+    if(!email.trim()){setErr("再設定するメールアドレスを入力してください。");return;}
+    run(async()=>{await fb.resetPassword(email.trim());setInfo("パスワード再設定メールを送信しました。");});
+  };
+  return e("div",{style:{minHeight:"100vh",background:C.bg,color:C.text,display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
+    e("div",{style:{width:"100%",maxWidth:360}},
+      e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:8,marginBottom:20}},
+        e(CairnMark),
+        e("div",{style:{fontFamily:"var(--mono)",fontSize:10,letterSpacing:3,color:C.faint}},"ケルン / TRAINING LOG"),
+        e("div",{style:{fontSize:24,fontWeight:700,letterSpacing:1}},"CAIRN")
+      ),
+      e(Panel,null,
+        e(Eyebrow,{color:C.info},mode==="signin"?"ログイン":"新規登録"),
+        e("div",{style:{marginTop:12}},
+          e(Field,{label:"メールアドレス"},e(TI,{type:"email",autoComplete:"email",value:email,onChange:ev=>setEmail(ev.target.value)})),
+          e(Field,{label:"パスワード（6文字以上）"},e(TI,{type:"password",autoComplete:mode==="signin"?"current-password":"new-password",value:pw,onChange:ev=>setPw(ev.target.value),onKeyDown:ev=>{if(ev.key==="Enter")submit();}}))
+        ),
+        err&&e("div",{style:{fontSize:12.5,color:C.bad,marginBottom:10,lineHeight:1.5}},err),
+        info&&e("div",{style:{fontSize:12.5,color:C.good,marginBottom:10,lineHeight:1.5}},info),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+          e(Btn,{kind:"solid",color:C.info,onClick:submit,style:{padding:13,opacity:busy?0.6:1}},busy?"処理中…":(mode==="signin"?"ログイン":"アカウントを作成")),
+          e(Btn,{kind:"ghost",onClick:()=>run(()=>fb.signInGoogle()),style:{padding:12}},"Googleでログイン")
+        ),
+        e("div",{style:{display:"flex",justifyContent:"space-between",marginTop:14}},
+          e("button",{onClick:()=>{setMode(mode==="signin"?"signup":"signin");setErr("");setInfo("");},style:{background:"none",border:"none",color:C.info,fontSize:12.5,cursor:"pointer",fontFamily:"var(--sans)",padding:0}},mode==="signin"?"新規登録はこちら":"ログインはこちら"),
+          e("button",{onClick:reset,style:{background:"none",border:"none",color:C.faint,fontSize:12.5,cursor:"pointer",fontFamily:"var(--sans)",padding:0}},"パスワード再設定")
+        )
+      ),
+      e("div",{style:{fontSize:11,color:C.faint,marginTop:14,lineHeight:1.6,textAlign:"center"}},"ログインするとトレーニング記録がクラウドに同期され、\n複数の端末から利用できます。")
+    )
+  );
+}
+
+function SetupScreen(){
+  const steps=[
+    "console.firebase.google.com でプロジェクトを作成",
+    "Authentication →「メール/パスワード」と「Google」を有効化",
+    "Authentication → Settings → 承認済みドメインに配信先ドメイン（例: username.github.io）を追加",
+    "Firestore Database を作成し、index.html 内コメントのセキュリティルールを設定",
+    "プロジェクトの設定 → マイアプリ → ウェブアプリを追加し、firebaseConfig を index.html の FIREBASE_CONFIG に貼り付け",
+  ];
+  return e("div",{style:{minHeight:"100vh",background:C.bg,color:C.text,display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
+    e("div",{style:{width:"100%",maxWidth:420}},
+      e(Panel,null,
+        e(Eyebrow,{color:C.warn},"Firebase設定が必要です"),
+        e("div",{style:{fontSize:13.5,color:C.muted,margin:"12px 0 14px",lineHeight:1.7}},"FIREBASE_CONFIG が未設定のためアプリを開始できません。以下の手順で設定してください。"),
+        e("ol",{style:{paddingLeft:20,display:"flex",flexDirection:"column",gap:10}},
+          steps.map((s,i)=>e("li",{key:i,style:{fontSize:13,lineHeight:1.6,color:C.text}},s))
+        )
+      )
+    )
+  );
+}
+
+// ── Root: Firebase初期化と認証状態の分岐 ──────────────────────────
+function Root(){
+  const [fb,setFb]=useState(null);
+  const [user,setUser]=useState(undefined); // undefined=判定中 / null=未ログイン
+  useEffect(()=>{
+    let alive=true;
+    Promise.race([
+      window.firebaseReady,
+      new Promise(res=>setTimeout(()=>res({loadFailed:true}),12000))
+    ]).then(f=>{
+      if(!alive)return;
+      setFb(f);
+      const el=document.getElementById("splash");
+      if(el){el.classList.add("out");setTimeout(()=>el.remove(),400);}
+      if(f.configMissing||f.loadFailed){setUser(null);return;}
+      f.onUser(u=>setUser(u||null));
+    });
+    return()=>{alive=false;};
+  },[]);
+  if(!fb||user===undefined)
+    return e("div",{style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,fontFamily:"var(--sans)",fontSize:14}},"接続中…");
+  if(fb.loadFailed)
+    return e("div",{style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,fontFamily:"var(--sans)",fontSize:14,padding:24,textAlign:"center",lineHeight:1.7}},"Firebase SDKを読み込めませんでした。\nネットワーク接続を確認して再読み込みしてください。");
+  if(fb.configMissing)return e(SetupScreen);
+  if(!user)return e(AuthScreen,{fb});
+  return e(App,{fb,user,key:user.uid});
+}
+
+// ── Mount ─────────────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById("root")).render(e(Root));
+})();
+</script>
+
+<script>
+// SW + PWA install
+if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+const bar=document.getElementById("offline-bar");
+window.addEventListener("offline",()=>bar.classList.add("show"));
+window.addEventListener("online",()=>bar.classList.remove("show"));
+if(!navigator.onLine)bar.classList.add("show");
+let dp=null;
+const ib=document.getElementById("install-banner");
+window.addEventListener("beforeinstallprompt",ev=>{ev.preventDefault();dp=ev;ib.classList.add("show");});
+document.getElementById("ibtn").addEventListener("click",async()=>{if(!dp)return;dp.prompt();await dp.userChoice;dp=null;ib.classList.remove("show");});
+document.getElementById("idismiss").addEventListener("click",()=>ib.classList.remove("show"));
+const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+if(isIos&&!isStandalone&&!sessionStorage.getItem("cairn-ios")){
+  setTimeout(()=>document.getElementById("ios-hint").classList.add("show"),3500);
+}
+document.getElementById("ios-close").addEventListener("click",()=>{document.getElementById("ios-hint").classList.remove("show");sessionStorage.setItem("cairn-ios","1");});
+</script>
+</body>
+</html>
